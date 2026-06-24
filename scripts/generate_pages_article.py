@@ -44,17 +44,21 @@ def load_candidates() -> dict[str, dict[str, Any]]:
 
 def latest_feedback(candidate_id: str) -> dict[str, Any]:
     latest: dict[str, Any] = {}
-    if not FEEDBACK_EVENTS.exists():
-        return latest
-    for line in FEEDBACK_EVENTS.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
+    feedback_paths = sorted((ROOT / "insight_vault").glob("30_*_Feedback/raw_feedback_events.jsonl"))
+    if FEEDBACK_EVENTS not in feedback_paths:
+        feedback_paths.append(FEEDBACK_EVENTS)
+    for path in feedback_paths:
+        if not path.exists():
             continue
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if str(event.get("item_id")) == candidate_id:
-            latest = event
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if str(event.get("item_id")) == candidate_id:
+                latest = event
     return latest
 
 

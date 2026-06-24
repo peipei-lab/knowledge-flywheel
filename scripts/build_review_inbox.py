@@ -102,6 +102,28 @@ def section_after(text: str, heading: str) -> str:
     return text[start:end].strip()
 
 
+def first_section_after(text: str, headings: list[str]) -> str:
+    for heading in headings:
+        section = section_after(text, heading)
+        if section:
+            return section
+    return ""
+
+
+def first_perspective_section(text: str) -> str:
+    explicit = first_section_after(text, ["Creator 视角"])
+    if explicit:
+        return explicit
+    pattern = re.compile(r"^##\s+.+视角\s*$", re.M)
+    match = pattern.search(text)
+    if not match:
+        return ""
+    start = match.end()
+    next_match = re.search(r"^##\s+", text[start:], re.M)
+    end = start + next_match.start() if next_match else len(text)
+    return text[start:end].strip()
+
+
 def first_bullet(section: str) -> str:
     for line in section.splitlines():
         stripped = line.strip()
@@ -145,7 +167,7 @@ def extract_candidates(path: Path) -> list[dict[str, Any]]:
     if source_match:
         source_file = source_match.group(1).strip()
 
-    core = section_after(text, "Creator 视角") or section_after(text, "自动结论草稿") or excerpt(text, 900)
+    core = first_perspective_section(text) or section_after(text, "自动结论草稿") or excerpt(text, 900)
     mechanism = section_after(text, "Mechanism / 底层机制")
     what = section_after(text, "What / 观察现象")
     topics = section_after(text, "内容选题")
