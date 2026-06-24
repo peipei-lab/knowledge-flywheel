@@ -1,0 +1,62 @@
+{
+  "run_limit_per_source": 3,
+  "days_back": 14,
+  "sources": [
+    {
+      "id": "hard_fork",
+      "name": "Hard Fork",
+      "type": "rss",
+      "url": "https://feeds.simplecast.com/l2i9YnTd",
+      "angle": "AI industry shifts, consumer technology, platform power",
+      "priority": 1
+    },
+    {
+      "id": "deeplearning_ai_batch",
+      "name": "DeepLearning.AI - The Batch",
+      "type": "rss",
+      "url": "https://www.deeplearning.ai/the-batch/feed",
+      "angle": "AI research, education, product shifts, practical implications",
+      "priority": 2
+    },
+    {
+      "id": "latent_space",
+      "name": "Latent Space",
+      "type": "rss",
+      "url": "https://www.latent.space/feed",
+      "angle": "frontier AI builders, developer workflows, model ecosystem",
+      "priority": 1
+    },
+    {
+      "id": "practical_ai",
+      "name": "Practical AI",
+      "type": "rss",
+      "url": "https://changelog.com/practicalai/feed",
+      "angle": "usable AI, engineering practice, realistic adoption",
+      "priority": 2
+    },
+    {
+      "id": "andrej_karpathy",
+      "name": "Andrej Karpathy Blog",
+      "type": "rss",
+      "url": "https://karpathy.github.io/feed.xml",
+      "angle": "AI education, model intuition, technical fundamentals",
+      "priority": 1
+    },
+    {
+      "id": "one_useful_thing",
+      "name": "One Useful Thing",
+      "type": "rss",
+      "url": "https://www.oneusefulthing.org/feed",
+      "angle": "AI and work, education, human behavior",
+      "priority": 1
+    },
+    {
+      "id": "simon_willison",
+      "name": "Simon Willison",
+      "type": "rss",
+      "url": "https://simonwillison.net/atom/everything/",
+      "angle": "LLM tooling, open models, developer literacy",
+      "priority": 2
+    }
+  ]
+}

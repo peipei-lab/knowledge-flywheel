@@ -1,0 +1,23 @@
+# Python / local runtime
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+
+# Generated/private knowledge data
+content/
+raw_capture_vault/
+insight_vault/
+obsidian_vault/
+book_vault/
+
+# Local machine and editor noise
+.DS_Store
+.idea/
+.vscode/
+
+# Logs / temporary files
+*.log
+tmp/
+work/

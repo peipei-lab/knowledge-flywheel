@@ -1,0 +1,17 @@
+{
+  "legal_boundary": "Only download public-domain, open-license, open-access, or user-owned books. Do not search for or download pirated copyrighted ebooks.",
+  "sources": [
+    {
+      "id": "gutenberg",
+      "name": "Project Gutenberg via Gutendex",
+      "type": "public_domain_api",
+      "search_url": "https://gutendex.com/books",
+      "priority": 1
+    }
+  ],
+  "analysis_modes": [
+    "knowledge_atoms",
+    "socratic_questions",
+    "creator_lens"
+  ]
+}

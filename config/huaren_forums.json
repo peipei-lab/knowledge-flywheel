@@ -1,0 +1,53 @@
+{
+  "base_url": "https://huaren.us",
+  "pages_per_forum": 2,
+  "max_results": 30,
+  "min_score": 1,
+  "privacy_policy": "Collect public metadata and user-supplied summaries only. Do not store full posts, usernames as identity signals, private details, or quoted personal stories.",
+  "forums": [
+    {
+      "id": "parenting",
+      "name": "Parenting 家有一小",
+      "url": "https://huaren.us/showforum.html?forumid=333",
+      "angle": "育儿、儿童教育、家庭亲情、孩子成长痛点",
+      "priority": 1
+    },
+    {
+      "id": "education",
+      "name": "Education 子女教育",
+      "url": "https://huaren.us/showforum.html?forumid=386",
+      "angle": "教育选择、升学焦虑、学习规划",
+      "priority": 1
+    },
+    {
+      "id": "chats",
+      "name": "Chats 华人闲话",
+      "url": "https://huaren.us/showforum.html?forumid=398",
+      "angle": "高频生活问题、家庭关系、社会情绪、北美华人真实痛点",
+      "priority": 2
+    },
+    {
+      "id": "office_lady",
+      "name": "Office Lady 职场伊人",
+      "url": "https://huaren.us/showforum.html?forumid=373",
+      "angle": "职业女性、职场发展、工作家庭平衡",
+      "priority": 1
+    }
+  ],
+  "default_lenses": [
+    "AI",
+    "孩子",
+    "教育",
+    "学习",
+    "妈妈",
+    "职场",
+    "女性",
+    "焦虑",
+    "时间",
+    "效率",
+    "家庭",
+    "青春期",
+    "申请",
+    "编程"
+  ]
+}
