@@ -7,6 +7,7 @@ import argparse
 import shutil
 from datetime import datetime
 from pathlib import Path
+from profile_config import creator_name
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -73,11 +74,12 @@ def wiki_links(files: list[Path]) -> str:
 
 def write_home(all_files: dict[str, list[Path]]) -> None:
     updated = datetime.now().strftime("%Y-%m-%d %H:%M")
-    body = f"""# Creator 第二大脑
+    name = creator_name()
+    body = f"""# {name} 第二大脑
 
 Updated: {updated}
 
-这是 Creator personal branding workflow 自动同步出来的 Obsidian vault。打开这个文件夹后，可以用 Graph View 查看知识原子、问题库、认知回流之间的关系。
+这是 {name} personal branding workflow 自动同步出来的 Obsidian vault。打开这个文件夹后，可以用 Graph View 查看知识原子、问题库、认知回流之间的关系。
 
 ## 本周工作台
 

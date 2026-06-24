@@ -12,6 +12,9 @@ insight_vault/
 obsidian_vault/
 book_vault/
 
+# Local private personalization
+config/*.local.json
+
 # Local machine and editor noise
 .DS_Store
 .idea/

@@ -11,11 +11,12 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from profile_config import creator_name, feedback_dir_name
 
 
 ROOT = Path(__file__).resolve().parents[1]
 INSIGHT_VAULT = ROOT / "insight_vault"
-FEEDBACK_DIR = INSIGHT_VAULT / "30_Creator_Feedback"
+FEEDBACK_DIR = INSIGHT_VAULT / feedback_dir_name()
 RAW_EVENTS = FEEDBACK_DIR / "raw_feedback_events.jsonl"
 FEEDBACK_LOG = FEEDBACK_DIR / "feedback_log.md"
 REVIEW_INBOX = INSIGHT_VAULT / "60_Review_Inbox"
@@ -112,7 +113,7 @@ def append_jsonl(path: Path, item: dict[str, Any]) -> None:
 def append_feedback_log(event: dict[str, Any], candidate: dict[str, Any]) -> None:
     FEEDBACK_LOG.parent.mkdir(parents=True, exist_ok=True)
     if not FEEDBACK_LOG.exists():
-        FEEDBACK_LOG.write_text("# Creator Feedback Log\n\n", encoding="utf-8")
+        FEEDBACK_LOG.write_text(f"# {creator_name()} Feedback Log\n\n", encoding="utf-8")
     text = f"""
 ## {event['created_at']} - {candidate.get('title') or event.get('item_id')}
 

@@ -10,6 +10,7 @@ import re
 import urllib.request
 from datetime import datetime
 from pathlib import Path
+from profile_config import render_profile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -74,7 +75,7 @@ def main() -> int:
     brief = brief_path.read_text(encoding="utf-8")
     backlog = PROBLEM_BACKLOG.read_text(encoding="utf-8") if PROBLEM_BACKLOG.exists() else ""
 
-    prompt = f"""{ATOM_PROMPT.read_text(encoding='utf-8')}
+    prompt = f"""{render_profile(ATOM_PROMPT.read_text(encoding='utf-8'))}
 
 # 当前 Problem Backlog
 
@@ -96,6 +97,7 @@ def main() -> int:
         atom_path.write_text(ai_output, encoding="utf-8")
     else:
         atom_path.write_text(
+            render_profile(
             f"""---
 type: knowledge_atom_batch
 date: {date_label}
@@ -132,7 +134,8 @@ _AI output was not generated. Set `OPENAI_API_KEY` or paste `{prompt_path.name}`
 ## Prompt Pack
 
 See: `{prompt_path}`
-""",
+"""
+            ),
             encoding="utf-8",
         )
 
@@ -143,4 +146,3 @@ See: `{prompt_path}`
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

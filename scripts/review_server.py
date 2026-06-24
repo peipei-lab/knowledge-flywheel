@@ -12,6 +12,7 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from profile_config import creator_name, render_profile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -196,7 +197,7 @@ def draft_cards() -> str:
       {score_input("life_reflection_value", 4)}
     </div>
     <label>Detailed feedback
-      <textarea name="feedback_text" placeholder="结构、论证、标题、语气、可信度、哪里不像 Creator"></textarea>
+      <textarea name="feedback_text" placeholder="{esc(render_profile("结构、论证、标题、语气、可信度、哪里不像 Creator"))}"></textarea>
     </label>
     <label>Revision request
       <textarea name="rewrite_instruction" placeholder="下一版具体怎么改"></textarea>
@@ -229,7 +230,7 @@ def page(track: str = "materials", message: str = "") -> str:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Creator Review Inbox</title>
+  <title>{esc(creator_name())} Review Inbox</title>
   <style>
     :root {{
       color-scheme: light;
@@ -359,7 +360,7 @@ def page(track: str = "materials", message: str = "") -> str:
 </head>
 <body>
   <header>
-    <h1>Creator Review Inbox</h1>
+    <h1>{esc(creator_name())} Review Inbox</h1>
     <nav>
       <a class="{active_materials}" href="/?track=materials">Materials</a>
       <a class="{active_drafts}" href="/?track=drafts">Drafts</a>

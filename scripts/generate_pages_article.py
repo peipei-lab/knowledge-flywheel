@@ -12,12 +12,13 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from profile_config import creator_name, feedback_dir_name, render_profile
 
 
 ROOT = Path(__file__).resolve().parents[1]
 INBOX = ROOT / "insight_vault" / "60_Review_Inbox"
 CANDIDATES_PATH = INBOX / "candidates.jsonl"
-FEEDBACK_EVENTS = ROOT / "insight_vault" / "30_Creator_Feedback" / "raw_feedback_events.jsonl"
+FEEDBACK_EVENTS = ROOT / "insight_vault" / feedback_dir_name() / "raw_feedback_events.jsonl"
 DRAFTS = ROOT / "content" / "pages_drafts"
 REVISIONS = ROOT / "insight_vault" / "70_Draft_Revisions"
 
@@ -114,7 +115,7 @@ def fallback_zh(candidate: dict[str, Any], source_text: str, feedback: dict[str,
     title = str(candidate.get("title") or "未命名文章")
     raw_feedback = str(feedback.get("raw_feedback_text") or "")
     rewrite = str(feedback.get("rewrite_instruction") or "")
-    return f"""# {title}
+    return render_profile(f"""# {title}
 
 > 这是一版可人工继续修改的 Pages 中文草稿。没有检测到 `OPENAI_API_KEY`，所以系统先生成结构化初稿，而不是假装已经完成深度写作。
 
@@ -155,11 +156,11 @@ def fallback_zh(candidate: dict[str, Any], source_text: str, feedback: dict[str,
 ## Source Notes
 
 {source_text[:2400].strip() or "_No source analysis found._"}
-"""
+""")
 
 
 def build_prompt(candidate: dict[str, Any], source_text: str, feedback: dict[str, Any]) -> str:
-    return f"""请基于下面的候选分析和 Creator 的人工反馈，写一篇准备发布到 GitHub Pages 的中文长文。
+    return render_profile(f"""请基于下面的候选分析和 Creator 的人工反馈，写一篇准备发布到 GitHub Pages 的中文长文。
 
 要求：
 - 主题范围：AI x 育儿 x 女性职业 x 人生思考。
@@ -177,11 +178,11 @@ Creator 最新反馈：
 
 源分析：
 {source_text}
-"""
+""")
 
 
 def translation_prompt(title: str, zh_article: str) -> str:
-    return f"""Translate and culturally adapt this Chinese article into natural English for GitHub Pages.
+    return render_profile(f"""Translate and culturally adapt this Chinese article into natural English for GitHub Pages.
 
 Rules:
 - Preserve Creator's voice: thoughtful, precise, warm, not hype-driven.
@@ -193,7 +194,7 @@ Title: {title}
 
 Chinese article:
 {zh_article}
-"""
+""")
 
 
 def archive_version(slug: str, zh_path: Path, en_path: Path, prompt_path: Path) -> None:
@@ -233,7 +234,7 @@ def main() -> int:
     if not candidate:
         raise SystemExit(f"Candidate not found: {args.candidate_id}")
 
-    title = args.title or str(candidate.get("title") or "Creator AI Notes")
+    title = args.title or str(candidate.get("title") or f"{creator_name()} AI Notes")
     slug_seed = args.slug or f"{args.date}-{title}"
     slug = slugify(slug_seed)
     source_text = read_source(candidate)
@@ -248,7 +249,7 @@ def main() -> int:
     zh_body = "" if args.no_ai else call_openai(
         prompt,
         args.model,
-        "You are Creator's bilingual editor. Write polished Simplified Chinese Markdown articles.",
+        render_profile("You are Creator's bilingual editor. Write polished Simplified Chinese Markdown articles."),
     )
     if not zh_body:
         zh_body = fallback_zh(candidate, source_text, feedback)
@@ -262,7 +263,7 @@ def main() -> int:
     en_body = "" if args.no_ai else call_openai(
         en_prompt,
         args.model,
-        "You are a careful English editor translating Creator's Chinese essays for an international audience.",
+        render_profile("You are a careful English editor translating Creator's Chinese essays for an international audience."),
     )
     if not en_body:
         en_body = f"""# {title}

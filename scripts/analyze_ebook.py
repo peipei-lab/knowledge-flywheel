@@ -11,6 +11,7 @@ import urllib.request
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+from profile_config import render_profile
 from xml.etree import ElementTree as ET
 
 
@@ -117,7 +118,7 @@ def heuristic_analysis(book_title: str, chapter_title: str, body: str) -> str:
     sentences = re.split(r"(?<=[。！？.!?])\s+", body)
     first_sentences = " ".join(sentences[:5])[:1000]
     keywords = [word for word in ["孩子", "教育", "学习", "女性", "职业", "AI", "家庭", "思考", "习惯", "问题"] if word in body]
-    return f"""# {book_title} - {chapter_title}
+    return render_profile(f"""# {book_title} - {chapter_title}
 
 Generated: {datetime.now(timezone.utc).isoformat()}
 
@@ -148,7 +149,7 @@ Generated: {datetime.now(timezone.utc).isoformat()}
 ## Creator 人工补充
 
 > 我读完这一章最想保留的判断是：
-"""
+""")
 
 
 def slugify(value: str) -> str:
@@ -177,7 +178,7 @@ def main() -> int:
     CHAPTER_DIR.mkdir(parents=True, exist_ok=True)
     ANALYSIS_DIR.mkdir(parents=True, exist_ok=True)
     PROMPT_DIR.mkdir(parents=True, exist_ok=True)
-    prompt_template = PROMPT_TEMPLATE.read_text(encoding="utf-8")
+    prompt_template = render_profile(PROMPT_TEMPLATE.read_text(encoding="utf-8"))
 
     for index, (chapter_title, body) in enumerate(chapters, 1):
         base = f"{slugify(book_title)}-ch{index:02d}-{slugify(chapter_title)}"
@@ -212,4 +213,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

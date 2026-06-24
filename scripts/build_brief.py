@@ -9,6 +9,7 @@ import os
 import urllib.request
 from datetime import datetime
 from pathlib import Path
+from profile_config import render_profile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,7 +33,7 @@ def call_openai(prompt: str, model: str) -> str:
         "input": [
             {
                 "role": "system",
-                "content": "You are a careful bilingual Chinese editor for Creator's AI personal-brand content workflow.",
+                "content": render_profile("You are a careful bilingual Chinese editor for Creator's AI personal-brand content workflow."),
             },
             {"role": "user", "content": prompt},
         ],
@@ -71,7 +72,7 @@ def main() -> int:
     if not source_pack:
         raise SystemExit(f"No Markdown source files found in {inbox_dir}")
 
-    prompt = f"""{PROMPT.read_text(encoding='utf-8')}
+    prompt = f"""{render_profile(PROMPT.read_text(encoding='utf-8'))}
 
 # 本周素材
 
@@ -88,6 +89,7 @@ def main() -> int:
         brief_path.write_text(ai_output, encoding="utf-8")
     else:
         brief_path.write_text(
+            render_profile(
             f"""# Creator AI 热点周报草稿：{date_label}
 
 _AI output was not generated. Set `OPENAI_API_KEY` or paste `{prompt_path.name}` into your preferred LLM._
@@ -105,7 +107,8 @@ _AI output was not generated. Set `OPENAI_API_KEY` or paste `{prompt_path.name}`
 ## Prompt Pack
 
 See: `{prompt_path}`
-""",
+"""
+            ),
             encoding="utf-8",
         )
 

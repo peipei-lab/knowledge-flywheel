@@ -9,6 +9,7 @@ import os
 import urllib.request
 from datetime import datetime
 from pathlib import Path
+from profile_config import render_profile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,7 +30,7 @@ def call_openai(prompt: str, model: str) -> str:
         "input": [
             {
                 "role": "system",
-                "content": "You are Creator's simplified-Chinese cognitive reflection assistant.",
+                "content": render_profile("You are Creator's simplified-Chinese cognitive reflection assistant."),
             },
             {"role": "user", "content": prompt},
         ],
@@ -72,7 +73,7 @@ def main() -> int:
     if not brief and not atoms:
         raise SystemExit(f"No weekly brief or knowledge atoms found for {date_label}")
 
-    prompt = f"""{REFLECTION_PROMPT.read_text(encoding='utf-8')}
+    prompt = f"""{render_profile(REFLECTION_PROMPT.read_text(encoding='utf-8'))}
 
 # Problem Backlog
 
@@ -98,6 +99,7 @@ def main() -> int:
         reflection_path.write_text(ai_output, encoding="utf-8")
     else:
         reflection_path.write_text(
+            render_profile(
             f"""# {date_label} 本周认知回流报告
 
 _AI output was not generated. Set `OPENAI_API_KEY` or paste `{prompt_path.name}` into your preferred LLM._
@@ -117,7 +119,8 @@ _AI output was not generated. Set `OPENAI_API_KEY` or paste `{prompt_path.name}`
 ## Prompt Pack
 
 See: `{prompt_path}`
-""",
+"""
+            ),
             encoding="utf-8",
         )
 
@@ -128,4 +131,3 @@ See: `{prompt_path}`
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

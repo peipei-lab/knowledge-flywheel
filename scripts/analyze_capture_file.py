@@ -11,6 +11,7 @@ import re
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
+from profile_config import render_profile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -98,7 +99,7 @@ def call_openai(prompt: str, model: str) -> str:
         "input": [
             {
                 "role": "system",
-                "content": "You analyze captured forum/social comments into simplified-Chinese insights for Creator.",
+                "content": render_profile("You analyze captured forum/social comments into simplified-Chinese insights for Creator."),
             },
             {"role": "user", "content": prompt},
         ],
@@ -136,7 +137,7 @@ def heuristic_analysis(path: Path, text: str, sections: list[dict[str, object]],
     debate_lines = "\n".join(
         f"- {item['title']}：{item['excerpt']}" for item in debates[:top_n]
     ) or "- 暂无"
-    return f"""# Capture Analysis: {title}
+    return render_profile(f"""# Capture Analysis: {title}
 
 Source file: {path}
 Generated: {datetime.now(timezone.utc).isoformat()}
@@ -178,7 +179,7 @@ Generated: {datetime.now(timezone.utc).isoformat()}
 ## 人工补充
 
 > Creator 读完后最真实的判断：
-"""
+""")
 
 
 def main() -> int:

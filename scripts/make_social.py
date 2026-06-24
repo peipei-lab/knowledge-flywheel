@@ -7,6 +7,7 @@ import argparse
 import re
 from datetime import datetime
 from pathlib import Path
+from profile_config import creator_name, render_profile
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,7 +23,7 @@ def first_heading(text: str) -> str:
     for line in text.splitlines():
         if line.startswith("#"):
             return line.strip("# ").strip()
-    return "Creator AI 热点周报"
+    return f"{creator_name()} AI 热点周报"
 
 
 def main() -> int:
@@ -40,7 +41,7 @@ def main() -> int:
     xhs = f"""# 小红书草稿：{date_label}
 
 ## 标题
-{trim(title.replace('Creator', '').strip('：: '), 28)}
+{trim(title.replace('Creator', '').replace(creator_name(), '').strip('：: '), 28)}
 
 ## 封面文案
 AI 这周变了什么？
@@ -74,7 +75,7 @@ AI 这周变了什么？
 ## 3-5 分钟结构
 1. 发生了什么：用一句人话讲清本周最重要变化。
 2. 为什么重要：连到孩子学习、妈妈决策、女性职业成长。
-3. Creator 观点：给出清醒判断，不焦虑、不盲从。
+3. {creator_name()} 观点：给出清醒判断，不焦虑、不盲从。
 
 ## 结尾
 这周不要急着追所有热点。选一件和你生活最相关的 AI 变化，问自己：它能不能帮我和孩子更会思考？
