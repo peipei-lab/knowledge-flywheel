@@ -339,6 +339,12 @@ def system_panel() -> str:
     return f"""
 <section class="card">
   <h2>System</h2>
+  <form method="POST" action="/identity-init">
+    <div class="actions">
+      <span>Create local identity files from templates.</span>
+      <button type="submit">Initialize Identity</button>
+    </div>
+  </form>
   <form method="POST" action="/memory-reflect">
     <div class="actions">
       <span>Promote raw feedback and curated choices into principles.</span>
@@ -723,6 +729,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.handle_smoke_test()
         if self.path == "/memory-reflect":
             return self.handle_memory_reflect()
+        if self.path == "/identity-init":
+            return self.handle_identity_init()
         self.send_error(404)
 
     def read_form(self) -> Any:
@@ -943,6 +951,12 @@ class Handler(BaseHTTPRequestHandler):
     def handle_memory_reflect(self) -> None:
         result = run_brand_factory("memory", "reflect")
         msg = "Memory principles updated." if result.returncode == 0 else "Memory reflection failed: " + (result.stderr or result.stdout)
+        self.redirect("system", msg[-800:])
+        return
+
+    def handle_identity_init(self) -> None:
+        result = run_brand_factory("memory", "init-identity")
+        msg = "Identity files initialized." if result.returncode == 0 else "Identity init failed: " + (result.stderr or result.stdout)
         self.redirect("system", msg[-800:])
         return
 

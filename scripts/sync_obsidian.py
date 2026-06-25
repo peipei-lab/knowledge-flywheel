@@ -18,6 +18,7 @@ VAULT = ROOT / "obsidian_vault"
 
 FOLDERS = {
     "index": VAULT / "00_Index",
+    "identity": VAULT / "05_Identity",
     "atoms": VAULT / "10_Knowledge_Atoms",
     "problems": VAULT / "20_Problem_Backlog",
     "reflections": VAULT / "30_Reflections",
@@ -84,9 +85,14 @@ Updated: {updated}
 
 ## 本周工作台
 
+- [[USER]]
 - [[Problem Backlog]]
 - [[Knowledge Map]]
 - [[Forum Insight Template]]
+
+## 身份与协作方式
+
+{wiki_links(all_files.get("identity", []))}
 
 ## 知识原子
 
@@ -135,6 +141,7 @@ flowchart LR
   Problems --> Reflections[Cognitive Reflections]
   Reflections --> Topics[Next Topics]
   Feedback[Raw Feedback] --> Principles[Principles / Axioms]
+  Identity[Identity Context] --> Principles
   Principles --> Topics
   Topics --> Briefs
 ```
@@ -189,6 +196,8 @@ def main() -> int:
 
     ensure_dirs()
     all_files = {
+        "identity": copy_markdown(CONTENT / "identity", FOLDERS["identity"])
+        or copy_markdown(ROOT / "templates" / "identity", FOLDERS["identity"]),
         "atoms": copy_markdown(KNOWLEDGE / "atoms", FOLDERS["atoms"]),
         "problems": copy_markdown(KNOWLEDGE / "problem_backlog", FOLDERS["problems"]),
         "reflections": copy_markdown(KNOWLEDGE / "reflections", FOLDERS["reflections"]),

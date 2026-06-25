@@ -12,6 +12,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from identity_context import read_identity_context
 from profile_config import creator_name, feedback_dir_name, render_profile
 
 
@@ -76,6 +77,9 @@ def read_source(candidate: dict[str, Any]) -> str:
 def read_principles_context() -> str:
     names = ["creator_axioms.md", "taste_profile.md", "voice_profile.md", "source_quality.md"]
     chunks: list[str] = []
+    identity = read_identity_context()
+    if identity:
+        chunks.append(f"## identity_context\n\n{identity[:2200]}")
     for name in names:
         path = PRINCIPLES / name
         if path.exists():

@@ -310,6 +310,13 @@ def command_memory_reflect(args: argparse.Namespace) -> int:
     return run_with_auto_sync(cmd, not args.no_sync)
 
 
+def command_memory_init_identity(args: argparse.Namespace) -> int:
+    cmd = py("init_identity.py")
+    if args.overwrite:
+        cmd.append("--overwrite")
+    return run_with_auto_sync(cmd, not args.no_sync)
+
+
 def command_pages_draft(args: argparse.Namespace) -> int:
     cmd = py(
         "generate_pages_article.py",
@@ -740,6 +747,11 @@ def build_parser() -> argparse.ArgumentParser:
     mr.add_argument("--limit", type=int, default=80)
     mr.add_argument("--no-sync", action="store_true")
     mr.set_defaults(func=command_memory_reflect)
+
+    mi = memory_sub.add_parser("init-identity", help="Create local identity files from public templates.")
+    mi.add_argument("--overwrite", action="store_true")
+    mi.add_argument("--no-sync", action="store_true")
+    mi.set_defaults(func=command_memory_init_identity)
 
     pages = sub.add_parser("pages", help="Generate and publish bilingual GitHub Pages articles.")
     pages_sub = pages.add_subparsers(dest="pages_command", required=True)

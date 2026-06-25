@@ -14,6 +14,9 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PROFILE = ROOT / "config" / "brand_profile.json"
 LOCAL_PROFILE = ROOT / "config" / "brand_profile.local.json"
+IDENTITY_DIR = ROOT / "content" / "identity"
+TEMPLATE_IDENTITY_DIR = ROOT / "templates" / "identity"
+IDENTITY_FILES = ["USER.md", "SOUL.md", "COMMUNICATION.md", "DECISION_RULES.md"]
 
 
 def load_profile() -> dict[str, Any]:
@@ -50,4 +53,15 @@ def render_profile(text: str) -> str:
         text = text.replace("{{creator_identity}}", identity)
     if positioning:
         text = text.replace("{{creator_positioning}}", positioning)
+    text = text.replace("{{creator_identity_context}}", read_identity_context())
     return text
+
+
+def read_identity_context(limit_per_file: int = 1200) -> str:
+    base = IDENTITY_DIR if IDENTITY_DIR.exists() else TEMPLATE_IDENTITY_DIR
+    chunks: list[str] = []
+    for name in IDENTITY_FILES:
+        path = base / name
+        if path.exists():
+            chunks.append(f"## {name}\n\n{path.read_text(encoding='utf-8')[:limit_per_file]}")
+    return "\n\n".join(chunks)

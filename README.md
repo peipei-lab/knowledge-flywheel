@@ -113,6 +113,24 @@ insight_vault/30_Creator_Feedback/raw_feedback_events.jsonl
 
 ## Preference Principles
 
+Initialize local identity files first:
+
+```bash
+python3 brand_factory.py memory init-identity
+```
+
+This creates ignored local files under:
+
+```text
+content/identity/
+```
+
+Public templates live under:
+
+```text
+templates/identity/
+```
+
 The system can periodically promote raw feedback, curated-source reasons, and draft revision notes into compact principles.
 
 ```bash

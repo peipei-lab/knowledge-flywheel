@@ -10,6 +10,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from identity_context import read_identity_context
 from profile_config import creator_name, feedback_dir_name
 
 
@@ -169,6 +170,7 @@ def build_profiles(events: list[dict[str, Any]], curated: list[dict[str, str]], 
 
     generated = now_iso()
     name = creator_name()
+    identity = read_identity_context()
 
     taste_profile = f"""# Taste Profile
 
@@ -236,6 +238,10 @@ Generated: {generated}
 - Draft revisions reveal voice preference better than abstract style descriptions.
 - Prefer sparse, relevant context over dumping the whole vault into every generation.
 - Promote repeated feedback patterns into explicit writing and source-selection principles.
+
+## Identity Context
+
+{identity[:2600] or "_No identity context initialized yet._"}
 
 ## Candidate New Principles From Recent Data
 
