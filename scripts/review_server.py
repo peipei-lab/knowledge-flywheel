@@ -51,12 +51,19 @@ def load_drafts() -> list[dict[str, Any]]:
                 title = line.strip("# ").strip()
                 break
         slug = path.parent.name
+        en_path = path.with_name(path.name.replace(".zh.md", ".en.md"))
+        translation_status = "missing"
+        if en_path.exists():
+            en_text = en_path.read_text(encoding="utf-8")
+            translation_status = "pending" if "English translation pending" in en_text else "ready"
         rows.append(
             {
                 "item_id": f"draft:{slug}:{path.name}",
                 "slug": slug,
                 "title": title,
                 "path": str(path.relative_to(ROOT)),
+                "en_path": str(en_path.relative_to(ROOT)) if en_path.exists() else "",
+                "translation_status": translation_status,
                 "summary": excerpt_markdown(text, 720),
                 "mtime": path.stat().st_mtime,
             }
@@ -165,12 +172,14 @@ def draft_cards() -> str:
   <div class="meta">
     <span>pages draft</span>
     <span>{esc(item.get("slug"))}</span>
+    <span>English: {esc(item.get("translation_status"))}</span>
   </div>
   <h2>{esc(item.get("title"))}</h2>
   <p class="summary">{esc(item.get("summary"))}</p>
   <details>
     <summary>Draft path</summary>
     <p><code>{esc(item.get("path"))}</code></p>
+    <p><code>{esc(item.get("en_path"))}</code></p>
   </details>
   <form method="POST" action="/feedback">
     <input type="hidden" name="track" value="draft">

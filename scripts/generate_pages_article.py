@@ -20,6 +20,7 @@ INBOX = ROOT / "insight_vault" / "60_Review_Inbox"
 CANDIDATES_PATH = INBOX / "candidates.jsonl"
 FEEDBACK_EVENTS = ROOT / "insight_vault" / feedback_dir_name() / "raw_feedback_events.jsonl"
 DRAFTS = ROOT / "content" / "pages_drafts"
+CODEX_TASKS = ROOT / "content" / "codex_tasks" / "translation_requests"
 REVISIONS = ROOT / "insight_vault" / "70_Draft_Revisions"
 
 
@@ -197,6 +198,47 @@ Chinese article:
 """)
 
 
+def write_codex_translation_request(slug: str, title: str, zh_path: Path, en_path: Path, prompt_path: Path) -> Path:
+    CODEX_TASKS.mkdir(parents=True, exist_ok=True)
+    request_path = CODEX_TASKS / f"{slug}-translation-request.md"
+    request_path.write_text(
+        render_profile(
+            f"""# Codex Translation Request: {title}
+
+Status: pending
+Created: {datetime.now(timezone.utc).isoformat()}
+Slug: {slug}
+
+## Task
+
+Please translate and culturally adapt the Chinese draft into a natural English GitHub Pages article.
+
+## Requirements
+
+- Preserve Creator's voice: thoughtful, precise, warm, and not hype-driven.
+- Keep the AI x parenting x women's career x life-reflection framing when relevant.
+- Do not translate internal `Source Notes`, local filesystem paths, raw excerpts, or private workflow metadata into the public article.
+- Keep YAML frontmatter in the English output.
+- Write the final English draft back to the target file.
+
+## Source Chinese Draft
+
+`{zh_path.relative_to(ROOT)}`
+
+## Target English Draft
+
+`{en_path.relative_to(ROOT)}`
+
+## Translation Prompt
+
+`{prompt_path.relative_to(ROOT)}`
+"""
+        ),
+        encoding="utf-8",
+    )
+    return request_path
+
+
 def archive_version(slug: str, zh_path: Path, en_path: Path, prompt_path: Path) -> None:
     article_dir = REVISIONS / slug
     article_dir.mkdir(parents=True, exist_ok=True)
@@ -268,7 +310,7 @@ def main() -> int:
     if not en_body:
         en_body = f"""# {title}
 
-_English translation pending. Set `OPENAI_API_KEY` and rerun without `--no-ai`, or paste `translation-prompt.md` into your preferred model._
+_English translation pending. This draft has been routed to the local Codex translation queue._
 
 ## Chinese Draft Reference
 
@@ -277,12 +319,17 @@ See `{zh_path.name}` in the same draft folder.
     en_title = title if en_body.startswith("# ") else title
     en_path = article_dir / f"{args.date}-{slug}.en.md"
     en_path.write_text(frontmatter(en_title, slug, "en", args.date, "draft") + "\n" + en_body.strip() + "\n", encoding="utf-8")
+    request_path = None
+    if "English translation pending" in en_body:
+        request_path = write_codex_translation_request(slug, title, zh_path, en_path, en_prompt_path)
 
     archive_version(slug, zh_path, en_path, prompt_path)
     digest = hashlib.sha256((zh_body + en_body).encode("utf-8")).hexdigest()[:12]
     print(f"Generated bilingual Pages draft: {article_dir}")
     print(f"Chinese: {zh_path}")
     print(f"English: {en_path}")
+    if request_path:
+        print(f"Codex translation request: {request_path}")
     print(f"Draft digest: {digest}")
     return 0
 

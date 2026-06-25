@@ -337,6 +337,13 @@ def command_pages_publish(args: argparse.Namespace) -> int:
     return run_with_auto_sync(cmd, not args.no_sync)
 
 
+def command_pages_translation_queue(args: argparse.Namespace) -> int:
+    cmd = py("list_translation_requests.py")
+    if args.all:
+        cmd.append("--all")
+    return run_step(cmd)
+
+
 def command_paths(_: argparse.Namespace) -> int:
     paths = {
         "项目根目录": ROOT,
@@ -381,6 +388,7 @@ Creator Brand Factory
 13. 手动记录一条 Creator feedback
 14. 从 Review candidate 生成 GitHub Pages 双语草稿
 15. 发布双语草稿到 GitHub Pages repo
+16. 查看 Codex translation queue
 90. 维护：手动重新同步所有 Obsidian vault
 91. 维护：启动本地前台持续监控
 0. 退出
@@ -463,6 +471,8 @@ Creator Brand Factory
             if ask("只发布到本地 staging 目录测试？yes/no", "yes").lower().startswith("y"):
                 argv.append("--stage-only")
             return main(argv)
+        if choice == "16":
+            return main(["pages", "translation-queue"])
         if choice == "90":
             return main(["sync"])
         if choice == "91":
@@ -635,6 +645,10 @@ def build_parser() -> argparse.ArgumentParser:
     pp.add_argument("--message")
     pp.add_argument("--no-sync", action="store_true")
     pp.set_defaults(func=command_pages_publish)
+
+    tq = pages_sub.add_parser("translation-queue", help="List pending Codex translation requests.")
+    tq.add_argument("--all", action="store_true")
+    tq.set_defaults(func=command_pages_translation_queue)
 
     paths = sub.add_parser("paths", help="Show project and vault paths.")
     paths.set_defaults(func=command_paths)
