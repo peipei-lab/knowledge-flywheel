@@ -41,9 +41,20 @@ python3 brand_factory.py ebook analyze content/books/raw/book-file.txt --max-cha
 python3 brand_factory.py monitor --once --no-ai
 python3 brand_factory.py pages draft --candidate-id CANDIDATE_ID --slug my-article --no-ai
 python3 brand_factory.py pages publish --slug my-article --stage-only
+python3 brand_factory.py smoke-test
 python3 brand_factory.py paths
 python3 brand_factory.py sync  # maintenance fallback only
 ```
+
+## Smoke Test
+
+Run a local end-to-end test without publishing to a real GitHub Pages repo:
+
+```bash
+python3 brand_factory.py smoke-test
+```
+
+This checks Python compilation, Review Inbox generation, Pages draft generation, Codex translation queue creation, local staging publish, and Obsidian sync. The Review UI check is best-effort by default because some sandboxed environments block localhost requests. Use `--require-ui` when running from a normal terminal and you want UI reachability to be a hard failure.
 
 ## HITL Review Inbox
 

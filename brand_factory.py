@@ -344,6 +344,21 @@ def command_pages_translation_queue(args: argparse.Namespace) -> int:
     return run_step(cmd)
 
 
+def command_smoke_test(args: argparse.Namespace) -> int:
+    cmd = py(
+        "smoke_test.py",
+        *optional("--slug", args.slug),
+        *optional("--ui-url", args.ui_url),
+    )
+    if args.skip_ui:
+        cmd.append("--skip-ui")
+    if args.require_ui:
+        cmd.append("--require-ui")
+    if args.skip_sync:
+        cmd.append("--skip-sync")
+    return run_step(cmd)
+
+
 def command_paths(_: argparse.Namespace) -> int:
     paths = {
         "项目根目录": ROOT,
@@ -389,6 +404,7 @@ Creator Brand Factory
 14. 从 Review candidate 生成 GitHub Pages 双语草稿
 15. 发布双语草稿到 GitHub Pages repo
 16. 查看 Codex translation queue
+17. 运行本地 smoke test
 90. 维护：手动重新同步所有 Obsidian vault
 91. 维护：启动本地前台持续监控
 0. 退出
@@ -473,6 +489,8 @@ Creator Brand Factory
             return main(argv)
         if choice == "16":
             return main(["pages", "translation-queue"])
+        if choice == "17":
+            return main(["smoke-test"])
         if choice == "90":
             return main(["sync"])
         if choice == "91":
@@ -652,6 +670,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     paths = sub.add_parser("paths", help="Show project and vault paths.")
     paths.set_defaults(func=command_paths)
+
+    smoke = sub.add_parser("smoke-test", help="Run local end-to-end smoke test.")
+    smoke.add_argument("--slug", default="smoke-test-auto")
+    smoke.add_argument("--ui-url", default="http://127.0.0.1:8765")
+    smoke.add_argument("--skip-ui", action="store_true")
+    smoke.add_argument("--require-ui", action="store_true")
+    smoke.add_argument("--skip-sync", action="store_true")
+    smoke.set_defaults(func=command_smoke_test)
 
     return parser
 
