@@ -132,29 +132,31 @@ def intake_panel() -> str:
       <input name="keywords" value="AI,孩子,判断力">
     </label>
     <div class="grid">
-      <label>Huaren pages
-        <input name="pages" type="number" min="1" max="5" value="1">
-      </label>
-      <label>Max results
+      <label>Search breadth
         <input name="max_results" type="number" min="1" max="50" value="10">
       </label>
-      <label>Fetch top N comments
-        <input name="fetch_top" type="number" min="0" max="10" value="0">
+      <label>Comment depth
+        <input name="fetch_top" type="number" min="0" max="10" value="3">
+      </label>
+      <label>Long-form results
+        <input name="ebook_limit" type="number" min="1" max="30" value="5">
+      </label>
+    </div>
+    <details class="subpanel">
+      <summary>Advanced source controls</summary>
+      <label class="check"><input type="checkbox" name="include_community" value="1" checked> include community/forum search</label>
+      <label class="check"><input type="checkbox" name="include_longform" value="1" checked> include public ebook search</label>
+      <label class="check"><input type="checkbox" name="skip_monitor" value="1"> skip analysis rebuild</label>
+      <label>Long-form query override
+        <input name="ebook_query" placeholder="默认使用上面的 topic / prompt">
+      </label>
+    <div class="grid">
+      <label>Forum pages
+        <input name="pages" type="number" min="1" max="5" value="1">
       </label>
       <label>Thread pages
         <input name="thread_pages" type="number" min="1" max="5" value="1">
       </label>
-    </div>
-    <div class="subpanel">
-      <h3>Ebooks</h3>
-      <label class="check"><input type="checkbox" name="run_ebook" value="1"> include public ebook search</label>
-      <label>Book query
-        <input name="ebook_query" placeholder="默认使用上面的 topic / prompt">
-      </label>
-      <div class="grid">
-        <label>Book results
-          <input name="ebook_limit" type="number" min="1" max="30" value="5">
-        </label>
         <label>Download Gutendex ID
           <input name="ebook_download_id" placeholder="optional">
         </label>
@@ -166,15 +168,14 @@ def intake_panel() -> str:
           </select>
         </label>
       </div>
-    </div>
+    </details>
     <div class="subpanel">
       <h3>YouTube / Podcast</h3>
       <p class="empty">Transcript adapter is not enabled yet. For now, paste transcripts into the raw capture vault, then run monitoring.</p>
     </div>
     <div class="actions">
-      <label class="check"><input type="checkbox" name="skip_huaren" value="1"> Xiaohongshu brief only</label>
-      <label class="check"><input type="checkbox" name="skip_monitor" value="1"> skip analysis rebuild</label>
-      <button type="submit">Run Intake</button>
+      <span class="empty">Searches the available sources from your topic and saves the results into the knowledge workflow.</span>
+      <button type="submit">Run Research Intake</button>
     </div>
   </form>
 </section>
@@ -434,6 +435,7 @@ def page(track: str = "materials", message: str = "") -> str:
     }}
     h2 {{ margin: 10px 0 8px; font-size: 18px; }}
     h3 {{ margin: 0 0 8px; font-size: 15px; }}
+    summary {{ cursor: pointer; font-weight: 700; }}
     .summary {{ white-space: pre-wrap; }}
     .subpanel {{
       border-top: 1px solid var(--line);
@@ -568,7 +570,7 @@ class Handler(BaseHTTPRequestHandler):
             "--thread-pages",
             value("thread_pages", "1"),
         ]
-        if value("skip_huaren"):
+        if not value("include_community", ""):
             cmd.append("--skip-huaren")
         if value("skip_monitor"):
             cmd.append("--skip-monitor")
@@ -578,7 +580,7 @@ class Handler(BaseHTTPRequestHandler):
             messages.append("Community intake finished.")
         else:
             messages.append("Community intake failed: " + (result.stderr or result.stdout))
-        if result.returncode == 0 and value("run_ebook"):
+        if result.returncode == 0 and value("include_longform", ""):
             ebook_query = value("ebook_query") or prompt
             ebook_cmd = ["ebook", "search", "--query", ebook_query, "--limit", value("ebook_limit", "5")]
             download_id = value("ebook_download_id").strip()
