@@ -208,6 +208,13 @@ def intake_panel() -> str:
     return f"""
 <section class="card">
   <h2>Intake</h2>
+  <div class="source-strip" aria-label="Default sources">
+    <span>Default sources</span>
+    <strong>Huaren public search + comments</strong>
+    <strong>Xiaohongshu research brief</strong>
+    <strong>Public ebook search</strong>
+  </div>
+  <p class="empty">YouTube, podcasts, saved Xiaohongshu notes, specific Huaren links, and local ebooks go through Curated Inputs below.</p>
   <form method="POST" action="/intake">
     <label>Topic / prompt
       <textarea name="prompt" placeholder="例如：AI时代妈妈如何训练孩子判断力"></textarea>
@@ -586,6 +593,24 @@ def page(track: str = "materials", message: str = "") -> str:
     h3 {{ margin: 0 0 8px; font-size: 15px; }}
     summary {{ cursor: pointer; font-weight: 700; }}
     .summary {{ white-space: pre-wrap; }}
+    .source-strip {{
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 0 6px;
+    }}
+    .source-strip span {{
+      color: var(--muted);
+      font-weight: 700;
+    }}
+    .source-strip strong {{
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 3px 9px;
+      background: #f6f7f4;
+      font-size: 13px;
+    }}
     .subpanel {{
       border-top: 1px solid var(--line);
       margin-top: 16px;
