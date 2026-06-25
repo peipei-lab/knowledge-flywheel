@@ -100,7 +100,7 @@ http://127.0.0.1:8765
 
 The browser UI has four tabs:
 
-- `Intake`: run topic/prompt-driven research intake from the browser. You enter the question, keywords, and depth; the default sources are Huaren public search/comments, Xiaohongshu research briefs, and public-domain ebook search. Source controls are kept under an advanced section. `Curated Inputs` is the shared path for user-selected high-quality material: saved Xiaohongshu notes, specific Huaren threads, YouTube/podcast transcripts, articles, and user-owned `.txt`, `.md`, `.epub`, or `.pdf` ebooks. Curated inputs are marked with higher source priority and kept distinct from AI-discovered material. Ebook uploads default to the optional NotebookLM adapter; local chapter analysis remains available as a fallback for text/Markdown/EPUB.
+- `Intake`: run topic/prompt-driven research intake from the browser. You enter the question, keywords, and depth; the default sources are Huaren public search/comments, Xiaohongshu research briefs, and public-domain ebook search. Source controls are kept under an advanced section. `Curated Inputs` is the shared path for user-selected high-quality material: saved Xiaohongshu notes, specific Huaren threads, YouTube/podcast transcripts, articles, and user-owned `.txt`, `.md`, `.epub`, or `.pdf` ebooks. Curated inputs are marked with higher source priority and kept distinct from AI-discovered material. YouTube transcript fetch works when public captions or auto-captions are available. Podcast transcript fetch works when the RSS/page exposes a transcript URL or you provide a direct `.txt`, `.vtt`, or `.srt` transcript link; audio-only transcription needs a future ASR/Whisper adapter. Ebook uploads default to the optional NotebookLM adapter; local chapter analysis remains available as a fallback for text/Markdown/EPUB.
 - `Materials`: raw analyses the AI thinks may be useful or interesting. Your feedback here trains source/topic selection, curiosity fit, and what deserves deeper work.
 - `Drafts`: article drafts generated from a specific topic, prompt, or reviewed material. Your feedback here trains structure, voice, argument quality, publishability, and revision standards.
 - `System`: run the local smoke test and inspect pending Codex translation requests.
@@ -322,6 +322,25 @@ python3 scripts/sync_book_vault.py
 ```
 
 PDF ebooks should use the NotebookLM adapter path from the Intake UI or the `notebooklm` command below.
+
+## YouTube And Podcast Transcripts
+
+Curated Inputs can fetch transcripts from a URL before saving the source.
+
+YouTube transcript fetch uses `yt-dlp` and works when public captions or auto-captions are available:
+
+```bash
+outputs/brand_factory/.venv/bin/python -m pip install yt-dlp
+python3 scripts/fetch_transcript.py --source-type youtube --url "https://www.youtube.com/watch?v=..."
+```
+
+Podcast transcript fetch works when the RSS/page exposes a transcript URL, or when you provide a direct `.txt`, `.vtt`, or `.srt` transcript link:
+
+```bash
+python3 scripts/fetch_transcript.py --source-type podcast --url "https://example.com/episode-transcript.vtt"
+```
+
+Audio-only podcasts without public transcript text need a future ASR/Whisper adapter.
 
 Outputs:
 

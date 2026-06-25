@@ -260,10 +260,6 @@ def intake_panel() -> str:
         </label>
       </div>
     </details>
-    <div class="subpanel">
-      <h3>YouTube / Podcast</h3>
-      <p class="empty">Transcript adapter is not enabled yet. For now, paste transcripts into the raw capture vault, then run monitoring.</p>
-    </div>
     <div class="actions">
       <span class="empty">Searches the available sources from your topic and saves the results into the knowledge workflow.</span>
       <button type="submit">Run Research Intake</button>
@@ -280,6 +276,7 @@ def intake_panel() -> str:
           <option value="xiaohongshu">Xiaohongshu note</option>
           <option value="huaren">Huaren thread</option>
           <option value="youtube">YouTube video</option>
+          <option value="podcast">Podcast episode</option>
           <option value="article">Article / other</option>
         </select>
       </label>
@@ -296,6 +293,7 @@ def intake_panel() -> str:
     <label>Saved text / transcript / comments
       <textarea name="content" placeholder="粘贴你事先保存的小红书笔记、评论、YouTube transcript、文章摘录等"></textarea>
     </label>
+    <label class="check"><input type="checkbox" name="fetch_transcript" value="1"> fetch transcript from URL</label>
     <label>Why this matters
       <textarea name="user_note" placeholder="你为什么觉得它值得进入知识库？这会成为高价值 feedback 数据。"></textarea>
     </label>
@@ -784,12 +782,41 @@ class Handler(BaseHTTPRequestHandler):
         url = value("url")
         content = value("content")
         user_note = value("user_note")
+        transcript_message = ""
+        if value("fetch_transcript"):
+            if source_type not in {"youtube", "podcast"}:
+                self.redirect("intake", "Transcript fetch only supports YouTube and Podcast sources.")
+                return
+            if not url:
+                self.redirect("intake", "Transcript fetch failed: add a YouTube or podcast URL.")
+                return
+            transcript_result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "fetch_transcript.py"),
+                    "--source-type",
+                    source_type,
+                    "--url",
+                    url,
+                ],
+                cwd=ROOT,
+                text=True,
+                capture_output=True,
+            )
+            if transcript_result.returncode != 0:
+                self.redirect("intake", "Transcript fetch failed: " + (transcript_result.stderr or transcript_result.stdout)[-700:])
+                return
+            fetched_text = transcript_result.stdout.strip()
+            content = "\n\n".join(part for part in [content, "## Fetched transcript\n\n" + fetched_text] if part)
+            transcript_message = "Transcript fetched."
         if not url and not content:
             self.redirect("intake", "Curated source failed: add a URL or pasted text.")
             return
 
         note_path = write_curated_source_note(source_type, title, url, content, user_note)
         messages = [f"Saved curated source: {note_path.relative_to(ROOT)}"]
+        if transcript_message:
+            messages.append(transcript_message)
 
         if source_type == "huaren" and url:
             huaren_cmd = ["huaren", "thread", url, "--pages", value("huaren_pages", "1")]
