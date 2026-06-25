@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 import argparse
+import cgi
 import html
 import json
+import re
 import subprocess
 import sys
 import urllib.parse
@@ -21,6 +23,7 @@ INBOX = ROOT / "insight_vault" / "60_Review_Inbox"
 CANDIDATES_PATH = INBOX / "candidates.jsonl"
 DRAFTS = ROOT / "content" / "pages_drafts"
 TRANSLATION_REQUESTS = ROOT / "content" / "codex_tasks" / "translation_requests"
+BOOKS_RAW = ROOT / "content" / "books" / "raw"
 
 
 def run_brand_factory(*args: str) -> subprocess.CompletedProcess[str]:
@@ -30,6 +33,25 @@ def run_brand_factory(*args: str) -> subprocess.CompletedProcess[str]:
         text=True,
         capture_output=True,
     )
+
+
+def safe_filename(name: str) -> str:
+    base = Path(name or "uploaded-book").name
+    clean = re.sub(r"[^A-Za-z0-9._-]+", "-", base).strip(".-")
+    return clean or "uploaded-book"
+
+
+def unique_path(folder: Path, filename: str) -> Path:
+    candidate = folder / filename
+    if not candidate.exists():
+        return candidate
+    stem = candidate.stem
+    suffix = candidate.suffix
+    for index in range(2, 1000):
+        next_candidate = folder / f"{stem}-{index}{suffix}"
+        if not next_candidate.exists():
+            return next_candidate
+    raise RuntimeError("Could not create a unique upload filename.")
 
 
 def load_candidates() -> list[dict[str, Any]]:
@@ -150,13 +172,13 @@ def intake_panel() -> str:
       <label>Long-form query override
         <input name="ebook_query" placeholder="默认使用上面的 topic / prompt">
       </label>
-    <div class="grid">
-      <label>Forum pages
-        <input name="pages" type="number" min="1" max="5" value="1">
-      </label>
-      <label>Thread pages
-        <input name="thread_pages" type="number" min="1" max="5" value="1">
-      </label>
+      <div class="grid">
+        <label>Forum pages
+          <input name="pages" type="number" min="1" max="5" value="1">
+        </label>
+        <label>Thread pages
+          <input name="thread_pages" type="number" min="1" max="5" value="1">
+        </label>
         <label>Download Gutendex ID
           <input name="ebook_download_id" placeholder="optional">
         </label>
@@ -176,6 +198,26 @@ def intake_panel() -> str:
     <div class="actions">
       <span class="empty">Searches the available sources from your topic and saves the results into the knowledge workflow.</span>
       <button type="submit">Run Research Intake</button>
+    </div>
+  </form>
+</section>
+<section class="card">
+  <h2>Upload Local Ebook</h2>
+  <form method="POST" action="/ebook-upload" enctype="multipart/form-data">
+    <label>Ebook file
+      <input name="ebook_file" type="file" accept=".txt,.epub,.md">
+    </label>
+    <div class="grid">
+      <label>Title override
+        <input name="title" placeholder="optional">
+      </label>
+      <label>Max chapters
+        <input name="max_chapters" type="number" min="1" max="50" value="8">
+      </label>
+    </div>
+    <div class="actions">
+      <label class="check"><input type="checkbox" name="no_ai" value="1" checked> no AI call</label>
+      <button type="submit">Analyze Uploaded Ebook</button>
     </div>
   </form>
 </section>
@@ -537,6 +579,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.handle_feedback()
         if self.path == "/intake":
             return self.handle_intake()
+        if self.path == "/ebook-upload":
+            return self.handle_ebook_upload()
         if self.path == "/smoke-test":
             return self.handle_smoke_test()
         self.send_error(404)
@@ -595,6 +639,41 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 messages.append("Ebook intake failed: " + (ebook_result.stderr or ebook_result.stdout))
         msg = " ".join(messages)
+        self.redirect("intake", msg[-800:])
+        return
+
+    def handle_ebook_upload(self) -> None:
+        form = cgi.FieldStorage(
+            fp=self.rfile,
+            headers=self.headers,
+            environ={
+                "REQUEST_METHOD": "POST",
+                "CONTENT_TYPE": self.headers.get("Content-Type", ""),
+            },
+        )
+        file_item = form["ebook_file"] if "ebook_file" in form else None
+        if file_item is None or not getattr(file_item, "filename", ""):
+            self.redirect("intake", "Upload failed: choose a .txt, .md, or .epub file first.")
+            return
+        filename = safe_filename(file_item.filename)
+        if Path(filename).suffix.lower() not in {".txt", ".md", ".epub"}:
+            self.redirect("intake", "Upload failed: supported files are .txt, .md, and .epub.")
+            return
+        BOOKS_RAW.mkdir(parents=True, exist_ok=True)
+        dest = unique_path(BOOKS_RAW, filename)
+        dest.write_bytes(file_item.file.read())
+
+        cmd = ["ebook", "analyze", str(dest), "--max-chapters", form.getfirst("max_chapters", "8")]
+        title = form.getfirst("title", "").strip()
+        if title:
+            cmd.extend(["--title", title])
+        if form.getfirst("no_ai"):
+            cmd.append("--no-ai")
+        result = run_brand_factory(*cmd)
+        if result.returncode == 0:
+            msg = f"Uploaded and analyzed ebook: {dest.relative_to(ROOT)}"
+        else:
+            msg = "Ebook upload analysis failed: " + (result.stderr or result.stdout)
         self.redirect("intake", msg[-800:])
         return
 
