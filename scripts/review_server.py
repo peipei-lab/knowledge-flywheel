@@ -20,6 +20,16 @@ SCRIPTS = ROOT / "scripts"
 INBOX = ROOT / "insight_vault" / "60_Review_Inbox"
 CANDIDATES_PATH = INBOX / "candidates.jsonl"
 DRAFTS = ROOT / "content" / "pages_drafts"
+TRANSLATION_REQUESTS = ROOT / "content" / "codex_tasks" / "translation_requests"
+
+
+def run_brand_factory(*args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(ROOT / "brand_factory.py"), *args],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+    )
 
 
 def load_candidates() -> list[dict[str, Any]]:
@@ -90,6 +100,77 @@ def excerpt_markdown(text: str, limit: int) -> str:
 
 def esc(value: object) -> str:
     return html.escape(str(value or ""), quote=True)
+
+
+def status_of_request(path: Path) -> str:
+    for line in path.read_text(encoding="utf-8").splitlines()[:12]:
+        if line.lower().startswith("status:"):
+            return line.split(":", 1)[1].strip()
+    return "unknown"
+
+
+def translation_queue_cards() -> str:
+    requests = sorted(TRANSLATION_REQUESTS.glob("*.md")) if TRANSLATION_REQUESTS.exists() else []
+    pending = [(path, status_of_request(path)) for path in requests if status_of_request(path) == "pending"]
+    if not pending:
+        return "<p class='empty'>No pending translation requests.</p>"
+    rows = []
+    for path, status in pending[:20]:
+        rows.append(f"<li><span>{esc(status)}</span> <code>{esc(path.relative_to(ROOT))}</code></li>")
+    return "<ul class='queue'>" + "\n".join(rows) + "</ul>"
+
+
+def intake_panel() -> str:
+    return f"""
+<section class="card">
+  <h2>Intake</h2>
+  <form method="POST" action="/intake">
+    <label>Topic / prompt
+      <textarea name="prompt" placeholder="例如：AI时代妈妈如何训练孩子判断力"></textarea>
+    </label>
+    <label>Keywords
+      <input name="keywords" value="AI,孩子,判断力">
+    </label>
+    <div class="grid">
+      <label>Huaren pages
+        <input name="pages" type="number" min="1" max="5" value="1">
+      </label>
+      <label>Max results
+        <input name="max_results" type="number" min="1" max="50" value="10">
+      </label>
+      <label>Fetch top N comments
+        <input name="fetch_top" type="number" min="0" max="10" value="0">
+      </label>
+      <label>Thread pages
+        <input name="thread_pages" type="number" min="1" max="5" value="1">
+      </label>
+    </div>
+    <div class="actions">
+      <label class="check"><input type="checkbox" name="skip_huaren" value="1"> Xiaohongshu brief only</label>
+      <label class="check"><input type="checkbox" name="skip_monitor" value="1"> skip analysis rebuild</label>
+      <button type="submit">Run Intake</button>
+    </div>
+  </form>
+</section>
+"""
+
+
+def system_panel() -> str:
+    return f"""
+<section class="card">
+  <h2>System</h2>
+  <form method="POST" action="/smoke-test">
+    <div class="actions">
+      <span>Run local smoke test for the downstream workflow.</span>
+      <button type="submit">Run Smoke Test</button>
+    </div>
+  </form>
+</section>
+<section class="card">
+  <h2>Translation Queue</h2>
+  {translation_queue_cards()}
+</section>
+"""
 
 
 def material_cards() -> str:
@@ -230,16 +311,25 @@ def draft_cards() -> str:
 
 
 def page(track: str = "materials", message: str = "") -> str:
-    is_drafts = track == "drafts"
-    body = draft_cards() if is_drafts else material_cards()
-    active_materials = "active" if not is_drafts else ""
-    active_drafts = "active" if is_drafts else ""
+    panels = {
+        "intake": intake_panel,
+        "materials": material_cards,
+        "drafts": draft_cards,
+        "system": system_panel,
+    }
+    if track not in panels:
+        track = "materials"
+    body = panels[track]()
+    active_intake = "active" if track == "intake" else ""
+    active_materials = "active" if track == "materials" else ""
+    active_drafts = "active" if track == "drafts" else ""
+    active_system = "active" if track == "system" else ""
     return f"""<!doctype html>
 <html lang="zh-Hans">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{esc(creator_name())} Review Inbox</title>
+  <title>{esc(creator_name())} Knowledge Flywheel</title>
   <style>
     :root {{
       color-scheme: light;
@@ -365,14 +455,27 @@ def page(track: str = "materials", message: str = "") -> str:
       padding: 10px;
     }}
     .empty {{ color: var(--muted); }}
+    .queue {{
+      margin: 0;
+      padding-left: 20px;
+    }}
+    .queue li {{ margin: 8px 0; }}
+    .queue span {{
+      display: inline-block;
+      min-width: 64px;
+      color: var(--accent-dark);
+      font-weight: 700;
+    }}
   </style>
 </head>
 <body>
   <header>
-    <h1>{esc(creator_name())} Review Inbox</h1>
+    <h1>{esc(creator_name())} Knowledge Flywheel</h1>
     <nav>
+      <a class="{active_intake}" href="/?track=intake">Intake</a>
       <a class="{active_materials}" href="/?track=materials">Materials</a>
       <a class="{active_drafts}" href="/?track=drafts">Drafts</a>
+      <a class="{active_system}" href="/?track=system">System</a>
     </nav>
     {f'<p class="notice">{esc(message)}</p>' if message else ''}
   </header>
@@ -396,11 +499,63 @@ class Handler(BaseHTTPRequestHandler):
         self.respond(page(track, message))
 
     def do_POST(self) -> None:  # noqa: N802
+        if self.path == "/feedback":
+            return self.handle_feedback()
+        if self.path == "/intake":
+            return self.handle_intake()
+        if self.path == "/smoke-test":
+            return self.handle_smoke_test()
+        self.send_error(404)
+
+    def read_form(self) -> Any:
+        length = int(self.headers.get("Content-Length", "0"))
+        return urllib.parse.parse_qs(self.rfile.read(length).decode("utf-8"))
+
+    def redirect(self, track: str, msg: str) -> None:
+        self.send_response(303)
+        self.send_header("Location", f"/?track={track}&message=" + urllib.parse.quote(msg))
+        self.end_headers()
+
+    def handle_intake(self) -> None:
+        data = self.read_form()
+        value = lambda key, default="": data.get(key, [default])[0]
+        prompt = value("prompt") or "AI时代妈妈如何训练孩子判断力"
+        keywords = value("keywords") or "AI,孩子,判断力"
+        cmd = [
+            "intake-test",
+            "--prompt",
+            prompt,
+            "--keywords",
+            keywords,
+            "--pages",
+            value("pages", "1"),
+            "--max-results",
+            value("max_results", "10"),
+            "--fetch-top",
+            value("fetch_top", "0"),
+            "--thread-pages",
+            value("thread_pages", "1"),
+        ]
+        if value("skip_huaren"):
+            cmd.append("--skip-huaren")
+        if value("skip_monitor"):
+            cmd.append("--skip-monitor")
+        result = run_brand_factory(*cmd)
+        msg = "Intake finished." if result.returncode == 0 else "Intake failed: " + (result.stderr or result.stdout)
+        self.redirect("intake", msg[-800:])
+        return
+
+    def handle_smoke_test(self) -> None:
+        result = run_brand_factory("smoke-test", "--skip-ui")
+        msg = "Smoke test passed." if result.returncode == 0 else "Smoke test failed: " + (result.stderr or result.stdout)
+        self.redirect("system", msg[-800:])
+        return
+
+    def handle_feedback(self) -> None:
         if self.path != "/feedback":
             self.send_error(404)
             return
-        length = int(self.headers.get("Content-Length", "0"))
-        data = urllib.parse.parse_qs(self.rfile.read(length).decode("utf-8"))
+        data = self.read_form()
         value = lambda key, default="": data.get(key, [default])[0]
         cmd = [
             sys.executable,
@@ -461,10 +616,9 @@ class Handler(BaseHTTPRequestHandler):
                 msg = "Saved feedback, but Pages draft failed: " + (draft_result.stderr or draft_result.stdout)
         else:
             msg = "Saved feedback." if result.returncode == 0 else f"Failed: {result.stderr or result.stdout}"
-        self.send_response(303)
         redirect_track = "drafts" if value("track") == "draft" else "materials"
-        self.send_header("Location", f"/?track={redirect_track}&message=" + urllib.parse.quote(msg))
-        self.end_headers()
+        self.redirect(redirect_track, msg)
+        return
 
     def respond(self, body: str) -> None:
         encoded = body.encode("utf-8")

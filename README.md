@@ -98,10 +98,12 @@ Open:
 http://127.0.0.1:8765
 ```
 
-The browser UI has two tracks:
+The browser UI has four tabs:
 
+- `Intake`: run prompt/keyword-driven intake from the browser. It can create a Xiaohongshu research brief, run Huaren public search, and optionally fetch top Huaren thread comments.
 - `Materials`: raw analyses the AI thinks may be useful or interesting. Your feedback here trains source/topic selection, curiosity fit, and what deserves deeper work.
 - `Drafts`: article drafts generated from a specific topic, prompt, or reviewed material. Your feedback here trains structure, voice, argument quality, publishability, and revision standards.
+- `System`: run the local smoke test and inspect pending Codex translation requests.
 
 Every saved review appends an immutable raw feedback event to:
 
