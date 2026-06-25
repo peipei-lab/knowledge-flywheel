@@ -25,6 +25,7 @@ FOLDERS = {
     "social": VAULT / "50_Social_Drafts",
     "community": VAULT / "60_Community_Insights",
     "pages": VAULT / "70_Pages_Articles",
+    "principles": VAULT / "80_Principles",
     "templates": VAULT / "90_Templates",
 }
 
@@ -110,6 +111,10 @@ Updated: {updated}
 ## Pages 文章草稿/发布稿
 
 {wiki_links(all_files.get("pages", []))}
+
+## 判断原则 / Preference Model
+
+{wiki_links(all_files.get("principles", []))}
 """
     (VAULT / "Home.md").write_text(body, encoding="utf-8")
 
@@ -129,6 +134,8 @@ flowchart LR
   Atoms --> Problems[Problem Backlog]
   Problems --> Reflections[Cognitive Reflections]
   Reflections --> Topics[Next Topics]
+  Feedback[Raw Feedback] --> Principles[Principles / Axioms]
+  Principles --> Topics
   Topics --> Briefs
 ```
 
@@ -191,6 +198,7 @@ def main() -> int:
         + copy_markdown(CONTENT / "community" / "xiaohongshu", FOLDERS["community"]),
         "pages": copy_markdown_recursive(CONTENT / "pages_drafts", FOLDERS["pages"] / "drafts")
         + copy_markdown_recursive(CONTENT / "pages_published", FOLDERS["pages"] / "published"),
+        "principles": copy_markdown(CONTENT / "knowledge" / "principles", FOLDERS["principles"]),
     }
     write_problem_aliases()
     write_home(all_files)

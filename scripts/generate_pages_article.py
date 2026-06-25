@@ -22,6 +22,7 @@ FEEDBACK_EVENTS = ROOT / "insight_vault" / feedback_dir_name() / "raw_feedback_e
 DRAFTS = ROOT / "content" / "pages_drafts"
 CODEX_TASKS = ROOT / "content" / "codex_tasks" / "translation_requests"
 REVISIONS = ROOT / "insight_vault" / "70_Draft_Revisions"
+PRINCIPLES = ROOT / "content" / "knowledge" / "principles"
 
 
 def slugify(value: str) -> str:
@@ -72,6 +73,16 @@ def read_source(candidate: dict[str, Any]) -> str:
     return ""
 
 
+def read_principles_context() -> str:
+    names = ["creator_axioms.md", "taste_profile.md", "voice_profile.md", "source_quality.md"]
+    chunks: list[str] = []
+    for name in names:
+        path = PRINCIPLES / name
+        if path.exists():
+            chunks.append(f"## {name}\n\n{path.read_text(encoding='utf-8')[:1800]}")
+    return "\n\n".join(chunks)
+
+
 def call_openai(prompt: str, model: str, system: str) -> str:
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
@@ -112,7 +123,7 @@ status: {status}
 """
 
 
-def fallback_zh(candidate: dict[str, Any], source_text: str, feedback: dict[str, Any]) -> str:
+def fallback_zh(candidate: dict[str, Any], source_text: str, feedback: dict[str, Any], principles: str = "") -> str:
     title = str(candidate.get("title") or "未命名文章")
     raw_feedback = str(feedback.get("raw_feedback_text") or "")
     rewrite = str(feedback.get("rewrite_instruction") or "")
@@ -154,13 +165,17 @@ def fallback_zh(candidate: dict[str, Any], source_text: str, feedback: dict[str,
 
 {rewrite or "_暂无改写指令。_"}
 
+## 当前写作原则摘要
+
+{principles[:1600].strip() or "_暂无原则摘要。_"}
+
 ## Source Notes
 
 {source_text[:2400].strip() or "_No source analysis found._"}
 """)
 
 
-def build_prompt(candidate: dict[str, Any], source_text: str, feedback: dict[str, Any]) -> str:
+def build_prompt(candidate: dict[str, Any], source_text: str, feedback: dict[str, Any], principles: str) -> str:
     return render_profile(f"""请基于下面的候选分析和 Creator 的人工反馈，写一篇准备发布到 GitHub Pages 的中文长文。
 
 要求：
@@ -176,6 +191,9 @@ def build_prompt(candidate: dict[str, Any], source_text: str, feedback: dict[str
 
 Creator 最新反馈：
 {json.dumps(feedback, ensure_ascii=False, indent=2)}
+
+Creator compact principles:
+{principles or "_No promoted principles yet._"}
 
 源分析：
 {source_text}
@@ -281,7 +299,8 @@ def main() -> int:
     slug = slugify(slug_seed)
     source_text = read_source(candidate)
     feedback = latest_feedback(args.candidate_id)
-    prompt = build_prompt(candidate, source_text, feedback)
+    principles = read_principles_context()
+    prompt = build_prompt(candidate, source_text, feedback, principles)
 
     article_dir = DRAFTS / slug
     article_dir.mkdir(parents=True, exist_ok=True)
@@ -294,7 +313,7 @@ def main() -> int:
         render_profile("You are Creator's bilingual editor. Write polished Simplified Chinese Markdown articles."),
     )
     if not zh_body:
-        zh_body = fallback_zh(candidate, source_text, feedback)
+        zh_body = fallback_zh(candidate, source_text, feedback, principles)
 
     zh_path = article_dir / f"{args.date}-{slug}.zh.md"
     zh_path.write_text(frontmatter(title, slug, "zh", args.date, "draft") + "\n" + zh_body.strip() + "\n", encoding="utf-8")

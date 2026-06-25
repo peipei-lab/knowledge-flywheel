@@ -339,6 +339,12 @@ def system_panel() -> str:
     return f"""
 <section class="card">
   <h2>System</h2>
+  <form method="POST" action="/memory-reflect">
+    <div class="actions">
+      <span>Promote raw feedback and curated choices into principles.</span>
+      <button type="submit">Update Memory Principles</button>
+    </div>
+  </form>
   <form method="POST" action="/smoke-test">
     <div class="actions">
       <span>Run local smoke test for the downstream workflow.</span>
@@ -715,6 +721,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.handle_curated_source()
         if self.path == "/smoke-test":
             return self.handle_smoke_test()
+        if self.path == "/memory-reflect":
+            return self.handle_memory_reflect()
         self.send_error(404)
 
     def read_form(self) -> Any:
@@ -929,6 +937,12 @@ class Handler(BaseHTTPRequestHandler):
     def handle_smoke_test(self) -> None:
         result = run_brand_factory("smoke-test", "--skip-ui")
         msg = "Smoke test passed." if result.returncode == 0 else "Smoke test failed: " + (result.stderr or result.stdout)
+        self.redirect("system", msg[-800:])
+        return
+
+    def handle_memory_reflect(self) -> None:
+        result = run_brand_factory("memory", "reflect")
+        msg = "Memory principles updated." if result.returncode == 0 else "Memory reflection failed: " + (result.stderr or result.stdout)
         self.redirect("system", msg[-800:])
         return
 

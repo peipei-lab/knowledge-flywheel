@@ -103,13 +103,31 @@ The browser UI has four tabs:
 - `Intake`: run topic/prompt-driven research intake from the browser. You enter the question, keywords, and depth; the default sources are Huaren public search/comments, Xiaohongshu research briefs, and public-domain ebook search. Source controls are kept under an advanced section. `Curated Inputs` is the shared path for user-selected high-quality material: saved Xiaohongshu notes, specific Huaren threads, YouTube/podcast transcripts, articles, and user-owned `.txt`, `.md`, `.epub`, or `.pdf` ebooks. Curated inputs are marked with higher source priority and kept distinct from AI-discovered material. YouTube transcript fetch works when public captions or auto-captions are available. Podcast transcript fetch works when the RSS/page exposes a transcript URL or you provide a direct `.txt`, `.vtt`, or `.srt` transcript link; audio-only transcription needs a future ASR/Whisper adapter. Ebook uploads default to the optional NotebookLM adapter; local chapter analysis remains available as a fallback for text/Markdown/EPUB.
 - `Materials`: raw analyses the AI thinks may be useful or interesting. Your feedback here trains source/topic selection, curiosity fit, and what deserves deeper work.
 - `Drafts`: article drafts generated from a specific topic, prompt, or reviewed material. Your feedback here trains structure, voice, argument quality, publishability, and revision standards.
-- `System`: run the local smoke test and inspect pending Codex translation requests.
+- `System`: update promoted memory principles, run the local smoke test, and inspect pending Codex translation requests.
 
 Every saved review appends an immutable raw feedback event to:
 
 ```text
 insight_vault/30_Creator_Feedback/raw_feedback_events.jsonl
 ```
+
+## Preference Principles
+
+The system can periodically promote raw feedback, curated-source reasons, and draft revision notes into compact principles.
+
+```bash
+python3 brand_factory.py memory reflect
+```
+
+This writes:
+
+- `content/knowledge/principles/creator_axioms.md`
+- `content/knowledge/principles/taste_profile.md`
+- `content/knowledge/principles/voice_profile.md`
+- `content/knowledge/principles/source_quality.md`
+- `content/knowledge/principles/YYYY-MM-DD-preference-update.md`
+
+These files sync into Obsidian and are used as compact context when generating Pages drafts. The raw feedback log remains the source of truth; promoted principles are a working model that can evolve.
 
 In the browser UI, check `Pages draft` while saving feedback to turn a candidate into a bilingual GitHub Pages draft. This creates:
 

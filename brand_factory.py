@@ -301,6 +301,15 @@ def command_review_feedback(args: argparse.Namespace) -> int:
     return run_with_auto_sync(cmd, not args.no_sync)
 
 
+def command_memory_reflect(args: argparse.Namespace) -> int:
+    cmd = py(
+        "promote_principles.py",
+        *optional("--date", args.date),
+        *optional("--limit", args.limit),
+    )
+    return run_with_auto_sync(cmd, not args.no_sync)
+
+
 def command_pages_draft(args: argparse.Namespace) -> int:
     cmd = py(
         "generate_pages_article.py",
@@ -722,6 +731,15 @@ def build_parser() -> argparse.ArgumentParser:
     rf.add_argument("--memory-candidate", action="store_true")
     rf.add_argument("--no-sync", action="store_true")
     rf.set_defaults(func=command_review_feedback)
+
+    memory = sub.add_parser("memory", help="Promote feedback into preference principles.")
+    memory_sub = memory.add_subparsers(dest="memory_command", required=True)
+
+    mr = memory_sub.add_parser("reflect", help="Distill raw feedback and curated choices into principles.")
+    mr.add_argument("--date")
+    mr.add_argument("--limit", type=int, default=80)
+    mr.add_argument("--no-sync", action="store_true")
+    mr.set_defaults(func=command_memory_reflect)
 
     pages = sub.add_parser("pages", help="Generate and publish bilingual GitHub Pages articles.")
     pages_sub = pages.add_subparsers(dest="pages_command", required=True)

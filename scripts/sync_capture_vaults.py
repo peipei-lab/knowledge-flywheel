@@ -28,6 +28,8 @@ INSIGHT_FOLDERS = {
     "atoms": INSIGHT_VAULT / "20_Knowledge_Atoms",
     "problems": INSIGHT_VAULT / "30_Problem_Backlog",
     "reflections": INSIGHT_VAULT / "40_Reflections",
+    "preferences": INSIGHT_VAULT / "40_Preference_Model",
+    "memory_reflections": INSIGHT_VAULT / "45_Memory_Reflections",
 }
 
 
@@ -110,6 +112,14 @@ Updated: {updated}
 ## Reflections
 
 {wiki_links(files.get("reflections", []))}
+
+## Preference Model
+
+{wiki_links(files.get("preferences", []))}
+
+## Memory Reflections
+
+{wiki_links(files.get("memory_reflections", []))}
 """
     (INSIGHT_VAULT / "Home.md").write_text(body, encoding="utf-8")
 
@@ -138,6 +148,14 @@ def main() -> int:
         "atoms": copy_markdown(CONTENT / "knowledge" / "atoms", INSIGHT_FOLDERS["atoms"]),
         "problems": copy_markdown(CONTENT / "knowledge" / "problem_backlog", INSIGHT_FOLDERS["problems"]),
         "reflections": copy_markdown(CONTENT / "knowledge" / "reflections", INSIGHT_FOLDERS["reflections"]),
+        "preferences": sorted(
+            {
+                *copy_markdown(CONTENT / "knowledge" / "principles", INSIGHT_FOLDERS["preferences"]),
+                *list_markdown(INSIGHT_FOLDERS["preferences"]),
+            },
+            key=lambda p: p.name,
+        ),
+        "memory_reflections": list_markdown(INSIGHT_FOLDERS["memory_reflections"]),
     }
     write_raw_home(raw_files)
     write_insight_home(insight_files)
