@@ -359,6 +359,84 @@ def command_smoke_test(args: argparse.Namespace) -> int:
     return run_step(cmd)
 
 
+def command_intake_test(args: argparse.Namespace) -> int:
+    prompt = args.prompt or "AI 时代妈妈如何训练孩子的判断力，而不是只堆工具和课程"
+    keywords = args.keywords or "AI,孩子,教育,妈妈,学习"
+    code = 0
+
+    print("\nIntake test topic:")
+    print(f"- Prompt: {prompt}")
+    print(f"- Keywords: {keywords}")
+
+    steps: list[list[str]] = [
+        py(
+            "xiaohongshu_research_brief.py",
+            "--prompt",
+            prompt,
+            "--keywords",
+            keywords,
+            *optional("--date", args.date),
+        )
+    ]
+
+    if not args.skip_huaren:
+        huaren_cmd = [
+            *py(
+                "search_huaren.py",
+                "--prompt",
+                prompt,
+                "--keywords",
+                keywords,
+                "--pages",
+                str(args.pages),
+                "--max-results",
+                str(args.max_results),
+                *optional("--date", args.date),
+            ),
+            "--no-ai",
+        ]
+        steps.append(huaren_cmd)
+
+    for step in steps:
+        code = run_step(step)
+        if code:
+            return code
+
+    if args.fetch_top and not args.skip_huaren:
+        guided_args = argparse.Namespace(
+            keywords=keywords,
+            prompt=prompt,
+            date=args.date,
+            pages=args.pages,
+            max_results=args.max_results,
+            show=max(args.fetch_top, args.max_results),
+            default_top=args.fetch_top,
+            auto_fetch_top=args.fetch_top,
+            thread_pages=args.thread_pages,
+            model=None,
+            no_ai=True,
+            no_sync=True,
+        )
+        code = command_huaren_guided(guided_args)
+        if code:
+            return code
+
+    if not args.skip_monitor:
+        code = sync_all_vaults()
+        if code:
+            return code
+        code = run_step(py("monitor_capture_vault.py", "--once", "--no-ai"))
+        if code:
+            return code
+        code = run_step(py("build_review_inbox.py", "--limit", str(args.review_limit)))
+        if code:
+            return code
+
+    if args.no_sync:
+        return 0
+    return sync_all_vaults()
+
+
 def command_paths(_: argparse.Namespace) -> int:
     paths = {
         "项目根目录": ROOT,
@@ -405,6 +483,7 @@ Creator Brand Factory
 15. 发布双语草稿到 GitHub Pages repo
 16. 查看 Codex translation queue
 17. 运行本地 smoke test
+18. 运行 intake/search test
 90. 维护：手动重新同步所有 Obsidian vault
 91. 维护：启动本地前台持续监控
 0. 退出
@@ -491,6 +570,11 @@ Creator Brand Factory
             return main(["pages", "translation-queue"])
         if choice == "17":
             return main(["smoke-test"])
+        if choice == "18":
+            prompt = ask("研究 prompt", "AI 时代妈妈如何训练孩子的判断力，而不是只堆工具和课程")
+            keywords = ask("关键词", "AI,孩子,教育,妈妈,学习")
+            fetch_top = ask("抓取 Huaren top N 帖评论；0 表示只搜索不抓评论", "0")
+            return main(["intake-test", "--prompt", prompt, "--keywords", keywords, "--fetch-top", fetch_top])
         if choice == "90":
             return main(["sync"])
         if choice == "91":
@@ -678,6 +762,20 @@ def build_parser() -> argparse.ArgumentParser:
     smoke.add_argument("--require-ui", action="store_true")
     smoke.add_argument("--skip-sync", action="store_true")
     smoke.set_defaults(func=command_smoke_test)
+
+    intake = sub.add_parser("intake-test", help="Run prompt/keyword-driven intake search test.")
+    intake.add_argument("--prompt", default="")
+    intake.add_argument("--keywords", default="")
+    intake.add_argument("--date")
+    intake.add_argument("--pages", type=int, default=1)
+    intake.add_argument("--max-results", type=int, default=10)
+    intake.add_argument("--fetch-top", type=int, default=0, help="Fetch top N Huaren threads/comments after searching.")
+    intake.add_argument("--thread-pages", type=int, default=1)
+    intake.add_argument("--review-limit", type=int, default=20)
+    intake.add_argument("--skip-huaren", action="store_true", help="Only generate local Xiaohongshu research brief.")
+    intake.add_argument("--skip-monitor", action="store_true", help="Skip capture monitor and review inbox rebuild.")
+    intake.add_argument("--no-sync", action="store_true")
+    intake.set_defaults(func=command_intake_test)
 
     return parser
 

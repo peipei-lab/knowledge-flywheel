@@ -42,6 +42,7 @@ python3 brand_factory.py monitor --once --no-ai
 python3 brand_factory.py pages draft --candidate-id CANDIDATE_ID --slug my-article --no-ai
 python3 brand_factory.py pages publish --slug my-article --stage-only
 python3 brand_factory.py smoke-test
+python3 brand_factory.py intake-test --prompt "AI时代妈妈如何训练孩子判断力" --keywords "AI,孩子,判断力"
 python3 brand_factory.py paths
 python3 brand_factory.py sync  # maintenance fallback only
 ```
@@ -55,6 +56,27 @@ python3 brand_factory.py smoke-test
 ```
 
 This checks Python compilation, Review Inbox generation, Pages draft generation, Codex translation queue creation, local staging publish, and Obsidian sync. The Review UI check is best-effort by default because some sandboxed environments block localhost requests. Use `--require-ui` when running from a normal terminal and you want UI reachability to be a hard failure.
+
+## Intake Test
+
+Run a prompt/keyword-driven intake test:
+
+```bash
+python3 brand_factory.py intake-test \
+  --prompt "AI时代妈妈如何训练孩子判断力" \
+  --keywords "AI,孩子,判断力"
+```
+
+This creates a Xiaohongshu manual research brief and runs Huaren public search. To also fetch comments from the top ranked Huaren results, add:
+
+```bash
+python3 brand_factory.py intake-test \
+  --prompt "AI时代妈妈如何训练孩子判断力" \
+  --keywords "AI,孩子,判断力" \
+  --fetch-top 3
+```
+
+Use `--skip-huaren` for an offline/local-only test, or `--skip-monitor` when you only want to test search output without rebuilding the analysis inbox.
 
 ## HITL Review Inbox
 
