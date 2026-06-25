@@ -145,6 +145,32 @@ def intake_panel() -> str:
         <input name="thread_pages" type="number" min="1" max="5" value="1">
       </label>
     </div>
+    <div class="subpanel">
+      <h3>Ebooks</h3>
+      <label class="check"><input type="checkbox" name="run_ebook" value="1"> include public ebook search</label>
+      <label>Book query
+        <input name="ebook_query" placeholder="默认使用上面的 topic / prompt">
+      </label>
+      <div class="grid">
+        <label>Book results
+          <input name="ebook_limit" type="number" min="1" max="30" value="5">
+        </label>
+        <label>Download Gutendex ID
+          <input name="ebook_download_id" placeholder="optional">
+        </label>
+        <label>Format
+          <select name="ebook_prefer">
+            <option value="">auto</option>
+            <option value="txt">txt</option>
+            <option value="epub">epub</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div class="subpanel">
+      <h3>YouTube / Podcast</h3>
+      <p class="empty">Transcript adapter is not enabled yet. For now, paste transcripts into the raw capture vault, then run monitoring.</p>
+    </div>
     <div class="actions">
       <label class="check"><input type="checkbox" name="skip_huaren" value="1"> Xiaohongshu brief only</label>
       <label class="check"><input type="checkbox" name="skip_monitor" value="1"> skip analysis rebuild</label>
@@ -407,7 +433,13 @@ def page(track: str = "materials", message: str = "") -> str:
       background: #f6f7f4;
     }}
     h2 {{ margin: 10px 0 8px; font-size: 18px; }}
+    h3 {{ margin: 0 0 8px; font-size: 15px; }}
     .summary {{ white-space: pre-wrap; }}
+    .subpanel {{
+      border-top: 1px solid var(--line);
+      margin-top: 16px;
+      padding-top: 14px;
+    }}
     .grid {{
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
@@ -541,7 +573,26 @@ class Handler(BaseHTTPRequestHandler):
         if value("skip_monitor"):
             cmd.append("--skip-monitor")
         result = run_brand_factory(*cmd)
-        msg = "Intake finished." if result.returncode == 0 else "Intake failed: " + (result.stderr or result.stdout)
+        messages = []
+        if result.returncode == 0:
+            messages.append("Community intake finished.")
+        else:
+            messages.append("Community intake failed: " + (result.stderr or result.stdout))
+        if result.returncode == 0 and value("run_ebook"):
+            ebook_query = value("ebook_query") or prompt
+            ebook_cmd = ["ebook", "search", "--query", ebook_query, "--limit", value("ebook_limit", "5")]
+            download_id = value("ebook_download_id").strip()
+            prefer = value("ebook_prefer").strip()
+            if download_id:
+                ebook_cmd.extend(["--download-id", download_id])
+            if prefer:
+                ebook_cmd.extend(["--prefer", prefer])
+            ebook_result = run_brand_factory(*ebook_cmd)
+            if ebook_result.returncode == 0:
+                messages.append("Ebook intake finished.")
+            else:
+                messages.append("Ebook intake failed: " + (ebook_result.stderr or ebook_result.stdout))
+        msg = " ".join(messages)
         self.redirect("intake", msg[-800:])
         return
 

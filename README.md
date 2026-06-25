@@ -100,7 +100,7 @@ http://127.0.0.1:8765
 
 The browser UI has four tabs:
 
-- `Intake`: run prompt/keyword-driven intake from the browser. It can create a Xiaohongshu research brief, run Huaren public search, and optionally fetch top Huaren thread comments.
+- `Intake`: run prompt/keyword-driven intake from the browser. It can create a Xiaohongshu research brief, run Huaren public search, optionally fetch top Huaren thread comments, and optionally search public-domain ebooks. YouTube/podcast transcript intake is not enabled yet; paste transcripts into the raw capture vault for now.
 - `Materials`: raw analyses the AI thinks may be useful or interesting. Your feedback here trains source/topic selection, curiosity fit, and what deserves deeper work.
 - `Drafts`: article drafts generated from a specific topic, prompt, or reviewed material. Your feedback here trains structure, voice, argument quality, publishability, and revision standards.
 - `System`: run the local smoke test and inspect pending Codex translation requests.
