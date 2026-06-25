@@ -78,9 +78,11 @@ Updated: {updated}
 
 {wiki_links(files.get("xiaohongshu", []))}
 
-## Manual Inbox
+## Manual / Curated Inbox
 
-把你手动保存的 `.md` / `.txt` / `.json` / `.csv` 放到 `00_Inbox`，monitor 会发现并分析。
+{wiki_links(files.get("inbox", []))}
+
+把你手动保存或在 UI 中提交的高信号 `.md` / `.txt` / `.json` / `.csv` 放到 `00_Inbox`，monitor 会发现并分析。带有 `Source priority: curated` 的内容会在 Review Inbox 中获得更高权重。
 """
     (RAW_VAULT / "Home.md").write_text(body, encoding="utf-8")
 
@@ -126,6 +128,7 @@ def main() -> int:
     ensure_vault(INSIGHT_VAULT)
 
     raw_files = {
+        "inbox": list_markdown(RAW_FOLDERS["inbox"]),
         "huaren": copy_markdown(CONTENT / "community" / "huaren", RAW_FOLDERS["huaren"]),
         "xiaohongshu": copy_markdown(CONTENT / "community" / "xiaohongshu", RAW_FOLDERS["xiaohongshu"]),
     }

@@ -11,6 +11,7 @@ import re
 import subprocess
 import sys
 import urllib.parse
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,7 @@ CANDIDATES_PATH = INBOX / "candidates.jsonl"
 DRAFTS = ROOT / "content" / "pages_drafts"
 TRANSLATION_REQUESTS = ROOT / "content" / "codex_tasks" / "translation_requests"
 BOOKS_RAW = ROOT / "content" / "books" / "raw"
+RAW_INBOX = ROOT / "raw_capture_vault" / "00_Inbox"
 
 
 def run_brand_factory(*args: str) -> subprocess.CompletedProcess[str]:
@@ -52,6 +54,37 @@ def unique_path(folder: Path, filename: str) -> Path:
         if not next_candidate.exists():
             return next_candidate
     raise RuntimeError("Could not create a unique upload filename.")
+
+
+def source_note_filename(source_type: str, title: str) -> str:
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    slug = safe_filename(title or source_type).rsplit(".", 1)[0].lower()
+    return f"{stamp}-curated-{source_type}-{slug}.md"
+
+
+def write_curated_source_note(source_type: str, title: str, url: str, content: str, user_note: str) -> Path:
+    RAW_INBOX.mkdir(parents=True, exist_ok=True)
+    label = title or url or f"Curated {source_type}"
+    path = unique_path(RAW_INBOX, source_note_filename(source_type, label))
+    body = f"""# Curated Source: {label}
+
+Source type: {source_type}
+Source priority: curated
+Curation: user_specified
+Weight: high
+URL: {url or "N/A"}
+Captured: {datetime.now(timezone.utc).isoformat()}
+
+## Why saved / user note
+
+{user_note or "N/A"}
+
+## Content
+
+{content or "N/A"}
+"""
+    path.write_text(body, encoding="utf-8")
+    return path
 
 
 def load_candidates() -> list[dict[str, Any]]:
@@ -202,6 +235,40 @@ def intake_panel() -> str:
   </form>
 </section>
 <section class="card">
+  <h2>Curated Sources</h2>
+  <form method="POST" action="/curated-source">
+    <div class="grid">
+      <label>Source type
+        <select name="source_type">
+          <option value="xiaohongshu">Xiaohongshu note</option>
+          <option value="huaren">Huaren thread</option>
+          <option value="youtube">YouTube video</option>
+          <option value="article">Article / other</option>
+        </select>
+      </label>
+      <label>Huaren pages
+        <input name="huaren_pages" type="number" min="1" max="5" value="1">
+      </label>
+    </div>
+    <label>Title
+      <input name="title" placeholder="optional">
+    </label>
+    <label>URL
+      <input name="url" placeholder="optional, Huaren URL can trigger comment capture">
+    </label>
+    <label>Saved text / transcript / comments
+      <textarea name="content" placeholder="粘贴你事先保存的小红书笔记、评论、YouTube transcript、文章摘录等"></textarea>
+    </label>
+    <label>Why this matters
+      <textarea name="user_note" placeholder="你为什么觉得它值得进入知识库？这会成为高价值 feedback 数据。"></textarea>
+    </label>
+    <div class="actions">
+      <label class="check"><input type="checkbox" name="no_ai" value="1" checked> no AI call</label>
+      <button type="submit">Save Curated Source</button>
+    </div>
+  </form>
+</section>
+<section class="card">
   <h2>Upload Local Ebook</h2>
   <form method="POST" action="/ebook-upload" enctype="multipart/form-data">
     <label>Ebook file
@@ -253,6 +320,7 @@ def material_cards() -> str:
 <article class="card">
   <div class="meta">
     <span>{esc(item.get("source_type"))}</span>
+    <span>{esc(item.get("source_priority", "standard"))}</span>
     <span>Score {esc(item.get("score"))}</span>
     <span>{esc(", ".join(item.get("topics", [])))}</span>
   </div>
@@ -581,6 +649,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.handle_intake()
         if self.path == "/ebook-upload":
             return self.handle_ebook_upload()
+        if self.path == "/curated-source":
+            return self.handle_curated_source()
         if self.path == "/smoke-test":
             return self.handle_smoke_test()
         self.send_error(404)
@@ -640,6 +710,48 @@ class Handler(BaseHTTPRequestHandler):
                 messages.append("Ebook intake failed: " + (ebook_result.stderr or ebook_result.stdout))
         msg = " ".join(messages)
         self.redirect("intake", msg[-800:])
+        return
+
+    def handle_curated_source(self) -> None:
+        data = self.read_form()
+        value = lambda key, default="": data.get(key, [default])[0].strip()
+        source_type = value("source_type", "article")
+        title = value("title")
+        url = value("url")
+        content = value("content")
+        user_note = value("user_note")
+        if not url and not content:
+            self.redirect("intake", "Curated source failed: add a URL or pasted text.")
+            return
+
+        note_path = write_curated_source_note(source_type, title, url, content, user_note)
+        messages = [f"Saved curated source: {note_path.relative_to(ROOT)}"]
+
+        if source_type == "huaren" and url:
+            huaren_cmd = ["huaren", "thread", url, "--pages", value("huaren_pages", "1")]
+            if value("no_ai"):
+                huaren_cmd.append("--no-ai")
+            huaren_result = run_brand_factory(*huaren_cmd)
+            if huaren_result.returncode == 0:
+                messages.append("Huaren comments captured.")
+            else:
+                messages.append("Huaren comment capture failed: " + (huaren_result.stderr or huaren_result.stdout))
+
+        monitor_cmd = ["monitor", "--once"]
+        if value("no_ai"):
+            monitor_cmd.append("--no-ai")
+        monitor_result = run_brand_factory(*monitor_cmd)
+        if monitor_result.returncode == 0:
+            messages.append("Curated source analyzed.")
+        else:
+            messages.append("Curated analysis failed: " + (monitor_result.stderr or monitor_result.stdout))
+
+        review_result = run_brand_factory("review", "build")
+        if review_result.returncode == 0:
+            messages.append("Review inbox rebuilt.")
+        else:
+            messages.append("Review rebuild failed: " + (review_result.stderr or review_result.stdout))
+        self.redirect("intake", " ".join(messages)[-800:])
         return
 
     def handle_ebook_upload(self) -> None:

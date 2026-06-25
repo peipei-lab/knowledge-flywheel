@@ -152,10 +152,39 @@ def score_dimension(text: str, dimension: str) -> float:
     return min(5.0, hits * 1.25)
 
 
-def score_candidate(text: str) -> tuple[float, dict[str, float]]:
+def is_curated_source(text: str) -> bool:
+    lower = text.lower()
+    return any(
+        marker in lower
+        for marker in [
+            "source priority: curated",
+            "curation: user_specified",
+            "weight: high",
+            "curated source:",
+        ]
+    )
+
+
+def read_source_text(source_file: str) -> str:
+    if not source_file:
+        return ""
+    try:
+        path = Path(source_file)
+        if not path.is_absolute():
+            path = ROOT / source_file
+        if path.exists() and path.is_file():
+            return path.read_text(encoding="utf-8")[:3000]
+    except OSError:
+        return ""
+    return ""
+
+
+def score_candidate(text: str, curated: bool = False) -> tuple[float, dict[str, float]]:
     dimensions = {name: score_dimension(text, name) for name in KEYWORDS}
-    dimensions["source_quality"] = 3.0
+    dimensions["source_quality"] = 5.0 if curated else 3.0
     weighted = sum(dimensions[name] * weight for name, weight in WEIGHTS.items())
+    if curated:
+        weighted += 1.0
     return round(weighted, 3), {name: round(value, 2) for name, value in dimensions.items()}
 
 
@@ -166,14 +195,16 @@ def extract_candidates(path: Path) -> list[dict[str, Any]]:
     source_match = re.search(r"^Source file:\s*(.+)$", text, re.M)
     if source_match:
         source_file = source_match.group(1).strip()
+    source_text = read_source_text(source_file)
+    curated = is_curated_source("\n".join([text, source_text, str(path), source_file]))
 
     core = first_perspective_section(text) or section_after(text, "自动结论草稿") or excerpt(text, 900)
     mechanism = section_after(text, "Mechanism / 底层机制")
     what = section_after(text, "What / 观察现象")
     topics = section_after(text, "内容选题")
     recommended_angle = first_bullet(topics) if topics else ""
-    body_for_scoring = "\n".join([title, core, mechanism, what, topics, text[:2000]])
-    total_score, scores = score_candidate(body_for_scoring)
+    body_for_scoring = "\n".join([title, core, mechanism, what, topics, text[:2000], source_text[:1200]])
+    total_score, scores = score_candidate(body_for_scoring, curated=curated)
 
     candidate = {
         "candidate_id": stable_id(path, title),
@@ -181,13 +212,14 @@ def extract_candidates(path: Path) -> list[dict[str, Any]]:
         "title": title,
         "source_path": str(path.relative_to(ROOT)),
         "source_file": source_file,
-        "source_type": infer_source_type(path, text),
+        "source_type": infer_source_type(path, text, source_text),
         "summary": excerpt(core or what or text, 520),
         "mechanism": excerpt(mechanism, 520),
         "recommended_angle": recommended_angle,
         "topics": content_topics(body_for_scoring),
         "score": total_score,
         "scores": scores,
+        "source_priority": "curated" if curated else "standard",
         "status": "pending",
     }
     return [candidate]
@@ -205,7 +237,10 @@ def is_test_candidate(path: Path, candidate: dict[str, Any]) -> bool:
     return any(marker in haystack for marker in TEST_MARKERS)
 
 
-def infer_source_type(path: Path, text: str) -> str:
+def infer_source_type(path: Path, text: str, source_text: str = "") -> str:
+    source_type_match = re.search(r"^Source type:\s*(.+)$", source_text, re.M)
+    if source_type_match:
+        return source_type_match.group(1).strip().lower()
     lower = f"{path.name}\n{text[:1000]}".lower()
     if "xiaohongshu" in lower or "小红书" in lower:
         return "xiaohongshu"
@@ -233,6 +268,7 @@ def write_index(candidates: list[dict[str, Any]]) -> None:
 - Candidate ID: `{item['candidate_id']}`
 - Score: {item['score']}
 - Source type: {item['source_type']}
+- Source priority: {item.get('source_priority', 'standard')}
 - Topics: {", ".join(item['topics'])}
 - Source path: `{item['source_path']}`
 - Recommended angle: {item['recommended_angle'] or "待判断"}
