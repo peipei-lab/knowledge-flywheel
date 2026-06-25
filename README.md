@@ -100,7 +100,7 @@ http://127.0.0.1:8765
 
 The browser UI has four tabs:
 
-- `Intake`: run topic/prompt-driven research intake from the browser. You enter the question, keywords, and depth; the system routes across the available sources by default, including community/forum search, comment capture, Xiaohongshu research briefs, and public-domain ebook search. Source controls are kept under an advanced section. A separate curated-source form saves user-specified Xiaohongshu notes, Huaren threads, YouTube transcripts, articles, or other saved material with higher source priority. A local ebook upload form analyzes user-owned `.txt`, `.md`, or `.epub` files directly.
+- `Intake`: run topic/prompt-driven research intake from the browser. You enter the question, keywords, and depth; the system routes across the available sources by default, including community/forum search, comment capture, Xiaohongshu research briefs, and public-domain ebook search. Source controls are kept under an advanced section. `Curated Inputs` is the shared path for user-selected high-quality material: saved Xiaohongshu notes, Huaren threads, YouTube transcripts, articles, and user-owned `.txt`, `.md`, or `.epub` ebooks. Curated inputs are marked with higher source priority and kept distinct from AI-discovered material.
 - `Materials`: raw analyses the AI thinks may be useful or interesting. Your feedback here trains source/topic selection, curiosity fit, and what deserves deeper work.
 - `Drafts`: article drafts generated from a specific topic, prompt, or reviewed material. Your feedback here trains structure, voice, argument quality, publishability, and revision standards.
 - `System`: run the local smoke test and inspect pending Codex translation requests.

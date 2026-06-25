@@ -87,6 +87,35 @@ Captured: {datetime.now(timezone.utc).isoformat()}
     return path
 
 
+def write_curated_book_note(book_path: Path, title: str, user_note: str) -> Path:
+    label = title or book_path.stem
+    content = f"""Book file: {book_path.relative_to(ROOT)}
+
+This is a user-selected local ebook. Chapter-level analysis is stored in the book vault; this curation note exists so the book itself can enter the same high-priority review workflow as other user-selected sources.
+"""
+    return write_curated_source_note("book", label, str(book_path.relative_to(ROOT)), content, user_note)
+
+
+def write_book_curation_metadata(book_path: Path, title: str, user_note: str) -> Path:
+    label = title or book_path.stem
+    metadata_path = unique_path(BOOKS_RAW, f"{book_path.stem}-curation.md")
+    body = f"""# Curated Book: {label}
+
+Source type: book
+Source priority: curated
+Curation: user_specified
+Weight: high
+Book file: {book_path.name}
+Captured: {datetime.now(timezone.utc).isoformat()}
+
+## Why selected
+
+{user_note or "N/A"}
+"""
+    metadata_path.write_text(body, encoding="utf-8")
+    return metadata_path
+
+
 def load_candidates() -> list[dict[str, Any]]:
     if not CANDIDATES_PATH.exists():
         return []
@@ -235,7 +264,8 @@ def intake_panel() -> str:
   </form>
 </section>
 <section class="card">
-  <h2>Curated Sources</h2>
+  <h2>Curated Inputs</h2>
+  <h3>Saved source</h3>
   <form method="POST" action="/curated-source">
     <div class="grid">
       <label>Source type
@@ -267,9 +297,9 @@ def intake_panel() -> str:
       <button type="submit">Save Curated Source</button>
     </div>
   </form>
-</section>
-<section class="card">
-  <h2>Upload Local Ebook</h2>
+  <div class="subpanel">
+    <h3>Local ebook</h3>
+  </div>
   <form method="POST" action="/ebook-upload" enctype="multipart/form-data">
     <label>Ebook file
       <input name="ebook_file" type="file" accept=".txt,.epub,.md">
@@ -282,6 +312,9 @@ def intake_panel() -> str:
         <input name="max_chapters" type="number" min="1" max="50" value="8">
       </label>
     </div>
+    <label>Why this book matters
+      <textarea name="user_note" placeholder="你为什么选中这本书？以后可以用来学习你的选书标准。"></textarea>
+    </label>
     <div class="actions">
       <label class="check"><input type="checkbox" name="no_ai" value="1" checked> no AI call</label>
       <button type="submit">Analyze Uploaded Ebook</button>
@@ -777,16 +810,39 @@ class Handler(BaseHTTPRequestHandler):
 
         cmd = ["ebook", "analyze", str(dest), "--max-chapters", form.getfirst("max_chapters", "8")]
         title = form.getfirst("title", "").strip()
+        user_note = form.getfirst("user_note", "").strip()
+        curated_note = write_curated_book_note(dest, title, user_note)
+        metadata_path = write_book_curation_metadata(dest, title, user_note)
         if title:
             cmd.extend(["--title", title])
         if form.getfirst("no_ai"):
             cmd.append("--no-ai")
         result = run_brand_factory(*cmd)
+        messages = [
+            f"Saved curated book: {dest.relative_to(ROOT)}",
+            f"Book curation note: {curated_note.relative_to(ROOT)}",
+            f"Book metadata: {metadata_path.relative_to(ROOT)}",
+        ]
         if result.returncode == 0:
-            msg = f"Uploaded and analyzed ebook: {dest.relative_to(ROOT)}"
+            messages.append("Ebook chapters analyzed.")
         else:
-            msg = "Ebook upload analysis failed: " + (result.stderr or result.stdout)
-        self.redirect("intake", msg[-800:])
+            messages.append("Ebook upload analysis failed: " + (result.stderr or result.stdout))
+
+        monitor_cmd = ["monitor", "--once"]
+        if form.getfirst("no_ai"):
+            monitor_cmd.append("--no-ai")
+        monitor_result = run_brand_factory(*monitor_cmd)
+        if monitor_result.returncode == 0:
+            messages.append("Curated book added to review workflow.")
+        else:
+            messages.append("Curated book review workflow failed: " + (monitor_result.stderr or monitor_result.stdout))
+
+        review_result = run_brand_factory("review", "build")
+        if review_result.returncode == 0:
+            messages.append("Review inbox rebuilt.")
+        else:
+            messages.append("Review rebuild failed: " + (review_result.stderr or review_result.stdout))
+        self.redirect("intake", " ".join(messages)[-800:])
         return
 
     def handle_smoke_test(self) -> None:
