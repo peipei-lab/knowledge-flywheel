@@ -53,7 +53,7 @@ def wiki_links(files: list[Path]) -> str:
 
 def main() -> int:
     ensure()
-    raw = copy_files(CONTENT / "raw", FOLDERS["raw"], (".txt", ".epub", ".md", ".json"))
+    raw = copy_files(CONTENT / "raw", FOLDERS["raw"], (".txt", ".epub", ".md", ".pdf", ".json"))
     analyses = copy_files(CONTENT / "analyses", FOLDERS["analyses"], (".md",))
     notebooklm = copy_files(VAULT / "50_NotebookLM_Outputs", FOLDERS["notebooklm"], (".md",))
     body = f"""# Book Vault

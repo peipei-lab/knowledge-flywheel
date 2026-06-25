@@ -302,7 +302,7 @@ def intake_panel() -> str:
   </div>
   <form method="POST" action="/ebook-upload" enctype="multipart/form-data">
     <label>Ebook file
-      <input name="ebook_file" type="file" accept=".txt,.epub,.md">
+      <input name="ebook_file" type="file" accept=".txt,.epub,.md,.pdf">
     </label>
     <div class="grid">
       <label>Title override
@@ -311,12 +311,18 @@ def intake_panel() -> str:
       <label>Max chapters
         <input name="max_chapters" type="number" min="1" max="50" value="8">
       </label>
+      <label>Analysis engine
+        <select name="analysis_engine">
+          <option value="notebooklm">NotebookLM</option>
+          <option value="local">Local fallback</option>
+        </select>
+      </label>
     </div>
     <label>Why this book matters
       <textarea name="user_note" placeholder="你为什么选中这本书？以后可以用来学习你的选书标准。"></textarea>
     </label>
     <div class="actions">
-      <label class="check"><input type="checkbox" name="no_ai" value="1" checked> no AI call</label>
+      <label class="check"><input type="checkbox" name="no_ai" value="1" checked> curated-note no AI</label>
       <button type="submit">Analyze Uploaded Ebook</button>
     </div>
   </form>
@@ -798,35 +804,58 @@ class Handler(BaseHTTPRequestHandler):
         )
         file_item = form["ebook_file"] if "ebook_file" in form else None
         if file_item is None or not getattr(file_item, "filename", ""):
-            self.redirect("intake", "Upload failed: choose a .txt, .md, or .epub file first.")
+            self.redirect("intake", "Upload failed: choose a .txt, .md, .epub, or .pdf file first.")
             return
         filename = safe_filename(file_item.filename)
-        if Path(filename).suffix.lower() not in {".txt", ".md", ".epub"}:
-            self.redirect("intake", "Upload failed: supported files are .txt, .md, and .epub.")
+        if Path(filename).suffix.lower() not in {".txt", ".md", ".epub", ".pdf"}:
+            self.redirect("intake", "Upload failed: supported files are .txt, .md, .epub, and .pdf.")
             return
         BOOKS_RAW.mkdir(parents=True, exist_ok=True)
         dest = unique_path(BOOKS_RAW, filename)
         dest.write_bytes(file_item.file.read())
 
-        cmd = ["ebook", "analyze", str(dest), "--max-chapters", form.getfirst("max_chapters", "8")]
         title = form.getfirst("title", "").strip()
         user_note = form.getfirst("user_note", "").strip()
+        engine = form.getfirst("analysis_engine", "notebooklm")
         curated_note = write_curated_book_note(dest, title, user_note)
         metadata_path = write_book_curation_metadata(dest, title, user_note)
-        if title:
-            cmd.extend(["--title", title])
-        if form.getfirst("no_ai"):
-            cmd.append("--no-ai")
-        result = run_brand_factory(*cmd)
         messages = [
             f"Saved curated book: {dest.relative_to(ROOT)}",
             f"Book curation note: {curated_note.relative_to(ROOT)}",
             f"Book metadata: {metadata_path.relative_to(ROOT)}",
         ]
-        if result.returncode == 0:
-            messages.append("Ebook chapters analyzed.")
+
+        if engine == "notebooklm":
+            notebook_title = title or dest.stem
+            result = run_brand_factory(
+                "notebooklm",
+                "--create-title",
+                notebook_title,
+                "--source",
+                str(dest),
+                "--prompt-file",
+                "prompts/book_chapter_analysis.md",
+                "--output-name",
+                f"{dest.stem}-notebooklm",
+            )
+            if result.returncode == 0:
+                messages.append("NotebookLM analysis saved to book vault.")
+            else:
+                messages.append("NotebookLM analysis failed: " + (result.stderr or result.stdout))
         else:
-            messages.append("Ebook upload analysis failed: " + (result.stderr or result.stdout))
+            if dest.suffix.lower() == ".pdf":
+                messages.append("Local fallback does not support PDF. Use NotebookLM for PDF books.")
+            else:
+                cmd = ["ebook", "analyze", str(dest), "--max-chapters", form.getfirst("max_chapters", "8")]
+                if title:
+                    cmd.extend(["--title", title])
+                if form.getfirst("no_ai"):
+                    cmd.append("--no-ai")
+                result = run_brand_factory(*cmd)
+                if result.returncode == 0:
+                    messages.append("Local ebook chapters analyzed.")
+                else:
+                    messages.append("Local ebook analysis failed: " + (result.stderr or result.stdout))
 
         monitor_cmd = ["monitor", "--once"]
         if form.getfirst("no_ai"):

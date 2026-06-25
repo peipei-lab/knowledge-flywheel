@@ -100,7 +100,7 @@ http://127.0.0.1:8765
 
 The browser UI has four tabs:
 
-- `Intake`: run topic/prompt-driven research intake from the browser. You enter the question, keywords, and depth; the system routes across the available sources by default, including community/forum search, comment capture, Xiaohongshu research briefs, and public-domain ebook search. Source controls are kept under an advanced section. `Curated Inputs` is the shared path for user-selected high-quality material: saved Xiaohongshu notes, Huaren threads, YouTube transcripts, articles, and user-owned `.txt`, `.md`, or `.epub` ebooks. Curated inputs are marked with higher source priority and kept distinct from AI-discovered material.
+- `Intake`: run topic/prompt-driven research intake from the browser. You enter the question, keywords, and depth; the system routes across the available sources by default, including community/forum search, comment capture, Xiaohongshu research briefs, and public-domain ebook search. Source controls are kept under an advanced section. `Curated Inputs` is the shared path for user-selected high-quality material: saved Xiaohongshu notes, Huaren threads, YouTube transcripts, articles, and user-owned `.txt`, `.md`, `.epub`, or `.pdf` ebooks. Curated inputs are marked with higher source priority and kept distinct from AI-discovered material. Ebook uploads default to the optional NotebookLM adapter; local chapter analysis remains available as a fallback for text/Markdown/EPUB.
 - `Materials`: raw analyses the AI thinks may be useful or interesting. Your feedback here trains source/topic selection, curiosity fit, and what deserves deeper work.
 - `Drafts`: article drafts generated from a specific topic, prompt, or reviewed material. Your feedback here trains structure, voice, argument quality, publishability, and revision standards.
 - `System`: run the local smoke test and inspect pending Codex translation requests.
@@ -314,12 +314,14 @@ Download one result from the search list:
 python3 scripts/search_public_ebooks.py --query "education children thinking" --download-id gutenberg-XXXX
 ```
 
-Analyze a downloaded or user-owned `.txt` / `.epub`:
+Analyze a downloaded or user-owned `.txt` / `.md` / `.epub` locally:
 
 ```bash
 python3 scripts/analyze_ebook.py content/books/raw/book-file.txt --max-chapters 8 --no-ai
 python3 scripts/sync_book_vault.py
 ```
+
+PDF ebooks should use the NotebookLM adapter path from the Intake UI or the `notebooklm` command below.
 
 Outputs:
 
